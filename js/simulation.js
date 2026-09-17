@@ -5,10 +5,11 @@
 import { CONFIG } from './config.js';
 
 export class FluidSimulation {
-    constructor(webglContext) {
+    constructor(webglContext, performanceMonitor = null) {
         this.gl = webglContext.gl;
         this.programs = webglContext.programs;
         this.webglContext = webglContext;
+        this.performanceMonitor = performanceMonitor;
         
         // Create framebuffers
         this.velocity = webglContext.createDoubleFBO();
@@ -24,6 +25,10 @@ export class FluidSimulation {
     }
 
     splat(target, x, y, dx, dy, dz) {
+        if (this.performanceMonitor) {
+            this.performanceMonitor.startTiming('splat');
+        }
+        
         const gl = this.gl;
         gl.bindFramebuffer(gl.FRAMEBUFFER, target.fbo2.fbo);
         gl.viewport(0, 0, CONFIG.gridSize, CONFIG.gridSize);
@@ -38,6 +43,10 @@ export class FluidSimulation {
         
         this.webglContext.renderQuad(this.programs.splat);
         target.swap();
+        
+        if (this.performanceMonitor) {
+            this.performanceMonitor.endTiming('splat');
+        }
     }
 
     advect(target, dissipation = 1.0) {
@@ -60,6 +69,10 @@ export class FluidSimulation {
     }
 
     computeDivergence() {
+        if (this.performanceMonitor) {
+            this.performanceMonitor.startTiming('divergence');
+        }
+        
         const gl = this.gl;
         gl.bindFramebuffer(gl.FRAMEBUFFER, this.divergence.fbo);
         gl.viewport(0, 0, CONFIG.gridSize, CONFIG.gridSize);
@@ -70,9 +83,17 @@ export class FluidSimulation {
         gl.uniform1i(gl.getUniformLocation(this.programs.divergence, 'u_velocity'), 0);
         
         this.webglContext.renderQuad(this.programs.divergence);
+        
+        if (this.performanceMonitor) {
+            this.performanceMonitor.endTiming('divergence');
+        }
     }
 
     solvePressure() {
+        if (this.performanceMonitor) {
+            this.performanceMonitor.startTiming('pressureSolve');
+        }
+        
         const gl = this.gl;
         
         // Clear pressure buffers
@@ -91,17 +112,31 @@ export class FluidSimulation {
         gl.bindTexture(gl.TEXTURE_2D, this.divergence.tex);
         gl.uniform1i(gl.getUniformLocation(this.programs.jacobi, 'u_b'), 1);
         
-        for (let i = 0; i < this.params.iterations; i++) {
+        const targetIterations = this.params.iterations;
+        let actualIterations = 0;
+        
+        for (let i = 0; i < targetIterations; i++) {
             gl.bindFramebuffer(gl.FRAMEBUFFER, this.pressure.fbo2.fbo);
             gl.activeTexture(gl.TEXTURE0);
             gl.bindTexture(gl.TEXTURE_2D, this.pressure.fbo1.tex);
             gl.uniform1i(gl.getUniformLocation(this.programs.jacobi, 'u_x'), 0);
             this.webglContext.renderQuad(this.programs.jacobi);
             this.pressure.swap();
+            actualIterations++;
+        }
+        
+        // Update quality metrics
+        if (this.performanceMonitor) {
+            this.performanceMonitor.updateQualityMetrics(targetIterations, actualIterations);
+            this.performanceMonitor.endTiming('pressureSolve');
         }
     }
 
     subtractGradient() {
+        if (this.performanceMonitor) {
+            this.performanceMonitor.startTiming('gradient');
+        }
+        
         const gl = this.gl;
         gl.bindFramebuffer(gl.FRAMEBUFFER, this.velocity.fbo2.fbo);
         gl.viewport(0, 0, CONFIG.gridSize, CONFIG.gridSize);
@@ -117,12 +152,29 @@ export class FluidSimulation {
         
         this.webglContext.renderQuad(this.programs.gradient);
         this.velocity.swap();
+        
+        if (this.performanceMonitor) {
+            this.performanceMonitor.endTiming('gradient');
+        }
     }
 
     step() {
         // Advect velocity and dye
+        if (this.performanceMonitor) {
+            this.performanceMonitor.startTiming('advectVelocity');
+        }
         this.advect(this.velocity, CONFIG.velocityDissipation);
+        if (this.performanceMonitor) {
+            this.performanceMonitor.endTiming('advectVelocity');
+        }
+        
+        if (this.performanceMonitor) {
+            this.performanceMonitor.startTiming('advectDye');
+        }
         this.advect(this.dye, CONFIG.dyeDissipation);
+        if (this.performanceMonitor) {
+            this.performanceMonitor.endTiming('advectDye');
+        }
         
         // Compute divergence
         this.computeDivergence();

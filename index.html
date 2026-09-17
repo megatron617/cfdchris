@@ -20,7 +20,9 @@
             </div>
             <button id="clear">Clear</button>
             <button id="pause">Pause</button>
-            <span style="color:#aaa; font-size:12px;">Click and drag to add dye</span>
+            <button id="performance-toggle">Performance</button>
+            <span class="render-mode-badge" id="render-mode-badge">DETECTING...</span>
+            <span style="color:#aaa; font-size:12px;">Click and drag to add dye | Press P for performance</span>
         </div>
         <div id="canvas-container">
             <canvas id="displayCanvas" width="512" height="512"></canvas>
@@ -33,6 +35,95 @@
     
     <!-- Hidden WebGL canvas -->
     <canvas id="webglCanvas" width="128" height="128" style="display:none;"></canvas>
+    
+    <!-- Instructions Modal -->
+    <div id="instructions-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Software Rendering Test Instructions</h2>
+                <button class="modal-close" id="modal-close-btn">×</button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-intro">
+                    To test performance with software rendering (no GPU acceleration), you need to launch your browser with the <code>--disable-gpu</code> flag.
+                    The <code>--user-data-dir</code> flag creates a temporary profile to avoid affecting your main browser.
+                </p>
+                
+                <div class="instruction-section">
+                    <h3>Windows - Chrome</h3>
+                    <div class="command-box">
+                        <code id="cmd-chrome-win">chrome.exe --disable-gpu --user-data-dir="%TEMP%\chrome-no-gpu"</code>
+                        <button class="copy-btn" data-target="cmd-chrome-win">Copy</button>
+                    </div>
+                    <p class="instruction-note">Run this in Command Prompt or PowerShell from the Chrome installation directory.</p>
+                </div>
+                
+                <div class="instruction-section">
+                    <h3>Windows - Edge</h3>
+                    <div class="command-box">
+                        <code id="cmd-edge-win">msedge.exe --disable-gpu --user-data-dir="%TEMP%\edge-no-gpu"</code>
+                        <button class="copy-btn" data-target="cmd-edge-win">Copy</button>
+                    </div>
+                    <p class="instruction-note">Run this in Command Prompt or PowerShell from the Edge installation directory.</p>
+                </div>
+                
+                <div class="instruction-section">
+                    <h3>macOS - Chrome</h3>
+                    <div class="command-box">
+                        <code id="cmd-chrome-mac">/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome --disable-gpu --user-data-dir=/tmp/chrome-no-gpu</code>
+                        <button class="copy-btn" data-target="cmd-chrome-mac">Copy</button>
+                    </div>
+                    <p class="instruction-note">Run this in Terminal.</p>
+                </div>
+                
+                <div class="instruction-section">
+                    <h3>Linux - Chrome</h3>
+                    <div class="command-box">
+                        <code id="cmd-chrome-linux">google-chrome --disable-gpu --user-data-dir=/tmp/chrome-no-gpu</code>
+                        <button class="copy-btn" data-target="cmd-chrome-linux">Copy</button>
+                    </div>
+                    <p class="instruction-note">Run this in your terminal. Command may vary (try <code>chromium-browser</code> or <code>chromium</code>).</p>
+                </div>
+                
+                <div class="instruction-section">
+                    <h3>Firefox - All Platforms</h3>
+                    <p class="instruction-note">
+                        Firefox uses different rendering paths. To test software rendering:
+                        <ol>
+                            <li>Type <code>about:config</code> in the address bar</li>
+                            <li>Search for <code>webgl.disable-angle</code> and set to <code>true</code></li>
+                            <li>Search for <code>gfx.webrender.software</code> and set to <code>true</code></li>
+                            <li>Restart Firefox</li>
+                        </ol>
+                        Remember to revert these settings after testing.
+                    </p>
+                </div>
+                
+                <div class="instruction-section warning">
+                    <h3>⚠️ Important Notes</h3>
+                    <ul>
+                        <li>Software rendering will be <strong>significantly slower</strong> than GPU-accelerated rendering</li>
+                        <li>The temporary profile ensures your regular browser profile remains unchanged</li>
+                        <li>Navigate to this page after launching the browser with these flags</li>
+                        <li>The performance dashboard will automatically detect which mode is active</li>
+                        <li>Close the special browser instance when done testing</li>
+                    </ul>
+                </div>
+                
+                <div class="instruction-section">
+                    <h3>Verifying Rendering Mode</h3>
+                    <p class="instruction-note">
+                        Open the Performance Dashboard and check the "System Info" section. 
+                        The "Rendering Mode" field will show either <span class="badge-hardware">HARDWARE</span> 
+                        or <span class="badge-software">SOFTWARE</span>.
+                    </p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="modal-ok-btn" class="modal-btn">Got it!</button>
+            </div>
+        </div>
+    </div>
     
     <!-- Load modules -->
     <script type="module" src="js/main.js"></script>
