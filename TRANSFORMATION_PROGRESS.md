@@ -413,9 +413,40 @@ color = texture(u_field, samplePos);
 
 ## Next Steps
 
-### 🔄 Task 5: Implement 3D camera system (Orbit mode)
+### ✅ Task 5: 3D Camera System (Orbit Mode) - COMPLETE
 
-**Objective**: Create all fragment shaders for 3D fluid simulation.
+**Objective**: Implement orbit camera controls for 3D viewing
+
+**Files Created:**
+- `js/camera3d.js` - Camera3D base class, OrbitController, FreeFlightController stub
+- `test-camera.html` - Isolated camera testing page
+
+**Files Modified:**
+- `js/main.js` - Creates OrbitController, passes to renderer & input handler, updates camera info display
+- `js/renderer3d.js` - Accepts camera parameter (for future ray marching)
+- `js/input-handler.js` - LEFT click = fluid, RIGHT click = rotate, WHEEL = zoom, R key = reset
+- `index.html` - Added camera info display (azimuth, elevation, distance, controls help)
+
+**Implementation Details:**
+- **Spherical Coordinates:** Camera orbits around volume center [0.5, 0.5, 0.5]
+- **Azimuth:** Horizontal rotation (radians), unlimited
+- **Elevation:** Vertical rotation (radians), clamped to ±89.4° to prevent gimbal lock
+- **Distance:** Range 1.0 to 8.0, default 2.5
+- **Sensitivity:** Rotate 0.005 rad/pixel, Zoom 0.1 units/wheel tick
+- **View/Projection Matrices:** Full lookAt() and perspective() implementations
+- **Vector Math:** Cross product, dot product, normalization
+
+**Controls:**
+- LEFT MOUSE: Paint fluid (existing behavior)
+- RIGHT MOUSE + DRAG: Rotate camera around volume
+- MOUSE WHEEL: Zoom in/out
+- R KEY: Reset camera to default position
+
+**Status**: Camera infrastructure complete, awaiting Task 8 (ray marching) for visual impact
+
+---
+
+### 🔄 Task 6: 3D Raycasting for Mouse Interaction
 
 **Files to Create/Modify**:
 - Create `js/shaders3d.js` (will replace `shaders.js`)

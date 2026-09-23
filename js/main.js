@@ -5,6 +5,7 @@
 import { WebGLContext } from './webgl-utils.js';
 import { FluidSimulation3D } from './simulation3d.js';
 import { Renderer3D } from './renderer3d.js';
+import { OrbitController } from './camera3d.js';
 import { InputHandler } from './input-handler.js';
 import { UIController } from './ui-controller.js';
 import { CONFIG } from './config.js';
@@ -41,11 +42,14 @@ class FluidApp {
             // Initialize simulation with performance monitor
             this.simulation = new FluidSimulation3D(this.webglContext, this.performanceMonitor);
             
-            // Initialize renderer with performance monitor
-            this.renderer = new Renderer3D(this.webglContext, this.displayCanvas, this.simulation, this.performanceMonitor);
+            // Initialize 3D camera (orbit mode)
+            this.camera = new OrbitController();
             
-            // Initialize input handler
-            this.inputHandler = new InputHandler(this.displayCanvas, this.simulation, this.renderer);
+            // Initialize renderer with performance monitor and camera
+            this.renderer = new Renderer3D(this.webglContext, this.displayCanvas, this.simulation, this.camera, this.performanceMonitor);
+            
+            // Initialize input handler with camera
+            this.inputHandler = new InputHandler(this.displayCanvas, this.simulation, this.renderer, this.camera);
             
             // Initialize UI controller
             this.uiController = new UIController(this.simulation, this.renderer);
@@ -131,6 +135,9 @@ class FluidApp {
         // Update FPS counter
         this.uiController.updateFPS();
         
+        // Update camera info display
+        this.updateCameraInfo();
+        
         // Step simulation
         this.simulation.step();
         
@@ -148,6 +155,20 @@ class FluidApp {
         
         // Continue loop
         requestAnimationFrame(() => this.animate());
+    }
+
+    updateCameraInfo() {
+        if (!this.camera) return;
+        
+        const info = this.camera.getInfo();
+        
+        const azimuthElem = document.getElementById('cam-azimuth');
+        const elevationElem = document.getElementById('cam-elevation');
+        const distanceElem = document.getElementById('cam-distance');
+        
+        if (azimuthElem) azimuthElem.textContent = info.azimuth;
+        if (elevationElem) elevationElem.textContent = info.elevation;
+        if (distanceElem) distanceElem.textContent = info.distance;
     }
 }
 

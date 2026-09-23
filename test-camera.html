@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Camera Controls Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: monospace;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        #test-canvas {
+            border: 2px solid #444;
+            cursor: crosshair;
+        }
+        #info {
+            margin-top: 20px;
+            padding: 10px;
+            background: #2a2a2a;
+            border: 1px solid #444;
+        }
+        .value {
+            color: #4af;
+        }
+    </style>
+</head>
+<body>
+    <h2>Camera Controls Test</h2>
+    <canvas id="test-canvas" width="400" height="400"></canvas>
+    
+    <div id="info">
+        <h3>Camera Info</h3>
+        <div>Azimuth: <span class="value" id="azimuth">0.0°</span></div>
+        <div>Elevation: <span class="value" id="elevation">0.0°</span></div>
+        <div>Distance: <span class="value" id="distance">2.50</span></div>
+        <div>Position: <span class="value" id="position">[0, 0, 0]</span></div>
+        
+        <h3>Controls</h3>
+        <div>RIGHT-CLICK + DRAG: Rotate camera</div>
+        <div>MOUSE WHEEL: Zoom in/out</div>
+        <div>R KEY: Reset camera</div>
+        <div>LEFT-CLICK + DRAG: (test mouse detection)</div>
+    </div>
+    
+    <script type="module">
+        import { OrbitController } from './js/camera3d.js';
+        
+        const canvas = document.getElementById('test-canvas');
+        const ctx = canvas.getContext('2d');
+        const camera = new OrbitController();
+        
+        let rightMouseDown = false;
+        let prevX = 0;
+        let prevY = 0;
+        let mouseX = 0;
+        let mouseY = 0;
+        
+        // Mouse events
+        canvas.addEventListener('mousedown', (e) => {
+            if (e.button === 2) {
+                rightMouseDown = true;
+                const rect = canvas.getBoundingClientRect();
+                prevX = mouseX = e.clientX - rect.left;
+                prevY = mouseY = e.clientY - rect.top;
+            }
+        });
+        
+        canvas.addEventListener('mousemove', (e) => {
+            if (rightMouseDown) {
+                const rect = canvas.getBoundingClientRect();
+                prevX = mouseX;
+                prevY = mouseY;
+                mouseX = e.clientX - rect.left;
+                mouseY = e.clientY - rect.top;
+                
+                const deltaX = mouseX - prevX;
+                const deltaY = mouseY - prevY;
+                
+                camera.rotate(deltaX, deltaY);
+                updateDisplay();
+            }
+        });
+        
+        canvas.addEventListener('mouseup', (e) => {
+            if (e.button === 2) {
+                rightMouseDown = false;
+            }
+        });
+        
+        canvas.addEventListener('mouseleave', () => {
+            rightMouseDown = false;
+        });
+        
+        canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+        
+        canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            camera.zoom(e.deltaY * 0.01);
+            updateDisplay();
+        });
+        
+        // Keyboard
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'r' || e.key === 'R') {
+                camera.reset();
+                updateDisplay();
+            }
+        });
+        
+        // Update display
+        function updateDisplay() {
+            const info = camera.getInfo();
+            
+            document.getElementById('azimuth').textContent = info.azimuth;
+            document.getElementById('elevation').textContent = info.elevation;
+            document.getElementById('distance').textContent = info.distance;
+            document.getElementById('position').textContent = `[${info.position.join(', ')}]`;
+            
+            // Draw visualization
+            ctx.fillStyle = '#1a1a1a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw grid
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= 10; i++) {
+                const x = (i / 10) * canvas.width;
+                const y = (i / 10) * canvas.height;
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+            
+            // Draw center
+            ctx.fillStyle = '#4af';
+            ctx.fillRect(canvas.width/2 - 5, canvas.height/2 - 5, 10, 10);
+            
+            // Draw camera indicator (azimuth as a line from center)
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const azimuthRad = parseFloat(info.azimuth) * Math.PI / 180;
+            const radius = 100;
+            const endX = centerX + Math.sin(azimuthRad) * radius;
+            const endY = centerY - Math.cos(azimuthRad) * radius;
+            
+            ctx.strokeStyle = '#f44';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(centerX, centerY);
+            ctx.lineTo(endX, endY);
+            ctx.stroke();
+            
+            ctx.fillStyle = '#f44';
+            ctx.beginPath();
+            ctx.arc(endX, endY, 5, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Status text
+            ctx.fillStyle = '#fff';
+            ctx.font = '12px monospace';
+            ctx.fillText(rightMouseDown ? 'RIGHT MOUSE DOWN' : 'Ready', 10, 20);
+        }
+        
+        // Initial draw
+        updateDisplay();
+        
+        console.log('Camera test page loaded');
+        console.log('Camera:', camera);
+    </script>
+</body>
+</html>

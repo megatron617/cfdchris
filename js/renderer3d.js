@@ -5,7 +5,7 @@
 import { CONFIG, SliceAxis } from './config.js';
 
 export class Renderer3D {
-    constructor(webglContext, displayCanvas, simulation, performanceMonitor = null) {
+    constructor(webglContext, displayCanvas, simulation, camera = null, performanceMonitor = null) {
         this.webglContext = webglContext;
         this.gl = webglContext.gl;
         this.webglCanvas = webglContext.canvas;
@@ -14,6 +14,7 @@ export class Renderer3D {
         this.simulation = simulation;
         this.programs = webglContext.programs;
         this.performanceMonitor = performanceMonitor;
+        this.camera = camera;  // 3D camera (for future ray marching)
         
         // Slice rendering state
         this.sliceAxis = CONFIG.sliceAxis;      // 'x', 'y', or 'z'
@@ -23,6 +24,7 @@ export class Renderer3D {
         console.log('Renderer3D initialized');
         console.log(`  Slice axis: ${this.sliceAxis}`);
         console.log(`  Slice depth: ${this.sliceDepth}`);
+        console.log(`  Camera: ${camera ? 'enabled' : 'not set'}`);
     }
 
     /**

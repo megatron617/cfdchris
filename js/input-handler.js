@@ -5,11 +5,13 @@
 import { ColorMode, CURRENT_COLOR_MODE } from './config.js';
 
 export class InputHandler {
-    constructor(canvas, simulation, renderer = null) {
+    constructor(canvas, simulation, renderer = null, camera = null) {
         this.canvas = canvas;
         this.simulation = simulation;
         this.renderer = renderer;  // Optional: for getting current slice depth
+        this.camera = camera;      // Optional: for camera controls
         this.mouseDown = false;
+        this.rightMouseDown = false;  // For camera rotation
         this.mouseX = 0;
         this.mouseY = 0;
         this.prevX = 0;
@@ -21,13 +23,18 @@ export class InputHandler {
     setupEventListeners() {
         this.canvas.addEventListener('mousedown', (e) => this.onMouseDown(e));
         this.canvas.addEventListener('mousemove', (e) => this.onMouseMove(e));
-        this.canvas.addEventListener('mouseup', () => this.onMouseUp());
-        this.canvas.addEventListener('mouseleave', () => this.onMouseUp());
+        this.canvas.addEventListener('mouseup', (e) => this.onMouseUp(e));
+        this.canvas.addEventListener('mouseleave', () => this.onMouseLeave());
+        this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());  // Prevent right-click menu
+        this.canvas.addEventListener('wheel', (e) => this.onWheel(e), { passive: false });
         
         // Touch support
         this.canvas.addEventListener('touchstart', (e) => this.onTouchStart(e));
         this.canvas.addEventListener('touchmove', (e) => this.onTouchMove(e));
-        this.canvas.addEventListener('touchend', () => this.onMouseUp());
+        this.canvas.addEventListener('touchend', () => this.onMouseLeave());
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => this.onKeyDown(e));
     }
 
     getCanvasPosition(clientX, clientY) {
@@ -38,23 +45,69 @@ export class InputHandler {
     }
 
     onMouseDown(e) {
-        this.mouseDown = true;
+        if (e.button === 0) {  // Left click - fluid interaction
+            this.mouseDown = true;
+        } else if (e.button === 2) {  // Right click - camera rotation
+            this.rightMouseDown = true;
+        }
+        
         const pos = this.getCanvasPosition(e.clientX, e.clientY);
         this.prevX = this.mouseX = pos.x;
         this.prevY = this.mouseY = pos.y;
     }
 
     onMouseMove(e) {
+        this.prevX = this.mouseX;
+        this.prevY = this.mouseY;
+        
+        const pos = this.getCanvasPosition(e.clientX, e.clientY);
+        this.mouseX = pos.x;
+        this.mouseY = pos.y;
+        
         if (this.mouseDown) {
-            this.prevX = this.mouseX;
-            this.prevY = this.mouseY;
-            
-            const pos = this.getCanvasPosition(e.clientX, e.clientY);
-            this.mouseX = pos.x;
-            this.mouseY = pos.y;
-            
+            // Left mouse - apply fluid force
             this.applyForce();
+        } else if (this.rightMouseDown && this.camera) {
+            // Right mouse - rotate camera
+            const deltaX = (this.mouseX - this.prevX) * this.canvas.width;
+            const deltaY = (this.mouseY - this.prevY) * this.canvas.height;
+            this.camera.rotate(deltaX, deltaY);
         }
+    }
+    
+    onMouseUp(e) {
+        if (e.button === 0) {
+            this.mouseDown = false;
+        } else if (e.button === 2) {
+            this.rightMouseDown = false;
+        }
+    }
+    
+    onMouseLeave() {
+        this.mouseDown = false;
+        this.rightMouseDown = false;
+    }
+    
+    onWheel(e) {
+        e.preventDefault();
+        if (this.camera) {
+            // Zoom camera
+            this.camera.zoom(e.deltaY * 0.01);
+        }
+    }
+    
+    onKeyDown(e) {
+        // Camera reset (R key)
+        if (e.key === 'r' || e.key === 'R') {
+            if (this.camera && !this.isTyping()) {
+                this.camera.reset();
+            }
+        }
+    }
+    
+    isTyping() {
+        const active = document.activeElement;
+        return active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA');
     }
 
     onTouchStart(e) {
@@ -79,10 +132,6 @@ export class InputHandler {
             
             this.applyForce();
         }
-    }
-
-    onMouseUp() {
-        this.mouseDown = false;
     }
 
     applyForce() {
