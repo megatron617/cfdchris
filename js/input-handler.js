@@ -5,9 +5,10 @@
 import { ColorMode, CURRENT_COLOR_MODE } from './config.js';
 
 export class InputHandler {
-    constructor(canvas, simulation) {
+    constructor(canvas, simulation, renderer = null) {
         this.canvas = canvas;
         this.simulation = simulation;
+        this.renderer = renderer;  // Optional: for getting current slice depth
         this.mouseDown = false;
         this.mouseX = 0;
         this.mouseY = 0;
@@ -88,12 +89,17 @@ export class InputHandler {
         const dx = (this.mouseX - this.prevX) * this.simulation.params.forceMultiplier;
         const dy = (this.mouseY - this.prevY) * this.simulation.params.forceMultiplier;
         
-        // Add velocity
-        this.simulation.splat(this.simulation.velocity, this.mouseX, this.mouseY, dx, dy, 0);
+        // Inject at current slice depth if renderer is available
+        // Otherwise default to center (z = 0.5)
+        const z = this.renderer?.sliceDepth ?? 0.5;
+        const dz = 0.0;  // No Z-velocity for now (Task 6 will add this)
         
-        // Add dye color
+        // Add velocity (3D splat)
+        this.simulation.splat3D(this.simulation.velocity, this.mouseX, this.mouseY, z, dx, dy, dz);
+        
+        // Add dye color (3D splat)
         const color = this.getColor(dx, dy);
-        this.simulation.splat(this.simulation.dye, this.mouseX, this.mouseY, color.r, color.g, color.b);
+        this.simulation.splat3D(this.simulation.dye, this.mouseX, this.mouseY, z, color.r, color.g, color.b);
     }
 
     getColor(dx, dy) {

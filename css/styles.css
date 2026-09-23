@@ -897,3 +897,45 @@ button:hover {
     line-height: 1.4;
     margin-left: 24px;
 }
+
+
+/* 3D Slice Controls */
+.control-section {
+    background: #333;
+    padding: 10px;
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.control-section h4 {
+    margin: 0 0 5px 0;
+    font-size: 13px;
+    color: #4a90e2;
+}
+
+.button-group {
+    display: flex;
+    gap: 5px;
+}
+
+.axis-btn {
+    padding: 6px 12px;
+    font-size: 11px;
+    background: #444;
+    border: 1px solid #555;
+}
+
+.axis-btn.active {
+    background: #4a90e2;
+    border-color: #4a90e2;
+}
+
+.axis-btn:hover {
+    background: #555;
+}
+
+.axis-btn.active:hover {
+    background: #357abd;
+}

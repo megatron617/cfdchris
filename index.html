@@ -18,6 +18,24 @@
                 <label>Force: <span id="force-val">30</span></label>
                 <input type="range" id="force" min="5" max="100" value="30">
             </div>
+            
+            <!-- 3D Slice Controls -->
+            <div class="control-section">
+                <h4>3D Slice View</h4>
+                <div class="control">
+                    <label>Axis:</label>
+                    <div class="button-group">
+                        <button class="axis-btn active" data-axis="z">XY (Z-slice)</button>
+                        <button class="axis-btn" data-axis="y">XZ (Y-slice)</button>
+                        <button class="axis-btn" data-axis="x">YZ (X-slice)</button>
+                    </div>
+                </div>
+                <div class="control">
+                    <label>Depth: <span id="slice-depth-val">Layer 64/127</span></label>
+                    <input type="range" id="slice-depth" min="0" max="100" value="50" step="1">
+                </div>
+            </div>
+            
             <button id="clear">Clear</button>
             <button id="pause">Pause</button>
             <button id="performance-toggle">Performance</button>
@@ -29,7 +47,8 @@
         </div>
         <div id="info">
             <div>FPS: <span id="fps">0</span></div>
-            <div>Grid: 128×128</div>
+            <div>Grid: 128×128×128 (3D)</div>
+            <div>Voxels: 2.1M</div>
         </div>
     </div>
     

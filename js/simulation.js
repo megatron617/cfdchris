@@ -31,7 +31,7 @@ export class FluidSimulation {
         
         const gl = this.gl;
         gl.bindFramebuffer(gl.FRAMEBUFFER, target.fbo2.fbo);
-        gl.viewport(0, 0, CONFIG.gridSize, CONFIG.gridSize);
+        gl.viewport(0, 0, CONFIG.gridSize.x, CONFIG.gridSize.y);
         gl.useProgram(this.programs.splat);
         
         gl.activeTexture(gl.TEXTURE0);
@@ -52,7 +52,7 @@ export class FluidSimulation {
     advect(target, dissipation = 1.0) {
         const gl = this.gl;
         gl.bindFramebuffer(gl.FRAMEBUFFER, target.fbo2.fbo);
-        gl.viewport(0, 0, CONFIG.gridSize, CONFIG.gridSize);
+        gl.viewport(0, 0, CONFIG.gridSize.x, CONFIG.gridSize.y);
         gl.useProgram(this.programs.advect);
         
         gl.activeTexture(gl.TEXTURE0);
@@ -75,7 +75,7 @@ export class FluidSimulation {
         
         const gl = this.gl;
         gl.bindFramebuffer(gl.FRAMEBUFFER, this.divergence.fbo);
-        gl.viewport(0, 0, CONFIG.gridSize, CONFIG.gridSize);
+        gl.viewport(0, 0, CONFIG.gridSize.x, CONFIG.gridSize.y);
         gl.useProgram(this.programs.divergence);
         
         gl.activeTexture(gl.TEXTURE0);
@@ -139,7 +139,7 @@ export class FluidSimulation {
         
         const gl = this.gl;
         gl.bindFramebuffer(gl.FRAMEBUFFER, this.velocity.fbo2.fbo);
-        gl.viewport(0, 0, CONFIG.gridSize, CONFIG.gridSize);
+        gl.viewport(0, 0, CONFIG.gridSize.x, CONFIG.gridSize.y);
         gl.useProgram(this.programs.gradient);
         
         gl.activeTexture(gl.TEXTURE0);

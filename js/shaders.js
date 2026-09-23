@@ -35,7 +35,7 @@ export const jacobiFragmentShader = `#version 300 es
     uniform float u_alpha;
     uniform float u_rBeta;
     void main() {
-        vec2 px = vec2(1.0/${CONFIG.gridSize.toFixed(1)});
+        vec2 px = vec2(1.0/${CONFIG.gridSize.x.toFixed(1)});
         vec4 xL = texture(u_x, v_uv - vec2(px.x, 0));
         vec4 xR = texture(u_x, v_uv + vec2(px.x, 0));
         vec4 xB = texture(u_x, v_uv - vec2(0, px.y));
@@ -50,7 +50,7 @@ export const divergenceFragmentShader = `#version 300 es
     out vec4 outColor;
     uniform sampler2D u_velocity;
     void main() {
-        vec2 px = vec2(1.0/${CONFIG.gridSize.toFixed(1)});
+        vec2 px = vec2(1.0/${CONFIG.gridSize.x.toFixed(1)});
         vec2 vL = texture(u_velocity, v_uv - vec2(px.x, 0)).xy;
         vec2 vR = texture(u_velocity, v_uv + vec2(px.x, 0)).xy;
         vec2 vB = texture(u_velocity, v_uv - vec2(0, px.y)).xy;
@@ -66,7 +66,7 @@ export const gradientFragmentShader = `#version 300 es
     uniform sampler2D u_pressure;
     uniform sampler2D u_velocity;
     void main() {
-        vec2 px = vec2(1.0/${CONFIG.gridSize.toFixed(1)});
+        vec2 px = vec2(1.0/${CONFIG.gridSize.x.toFixed(1)});
         float pL = texture(u_pressure, v_uv - vec2(px.x, 0)).x;
         float pR = texture(u_pressure, v_uv + vec2(px.x, 0)).x;
         float pB = texture(u_pressure, v_uv - vec2(0, px.y)).x;

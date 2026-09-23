@@ -3,8 +3,8 @@
  */
 
 import { WebGLContext } from './webgl-utils.js';
-import { FluidSimulation } from './simulation.js';
-import { Renderer } from './renderer.js';
+import { FluidSimulation3D } from './simulation3d.js';
+import { Renderer3D } from './renderer3d.js';
 import { InputHandler } from './input-handler.js';
 import { UIController } from './ui-controller.js';
 import { CONFIG } from './config.js';
@@ -25,8 +25,8 @@ class FluidApp {
             this.displayCanvas = document.getElementById('displayCanvas');
             
             // Set canvas sizes
-            this.webglCanvas.width = CONFIG.gridSize;
-            this.webglCanvas.height = CONFIG.gridSize;
+            this.webglCanvas.width = CONFIG.gridSize.x;
+            this.webglCanvas.height = CONFIG.gridSize.y;
             this.displayCanvas.width = CONFIG.displayWidth;
             this.displayCanvas.height = CONFIG.displayHeight;
             
@@ -39,16 +39,16 @@ class FluidApp {
             this.performanceDashboard = new PerformanceDashboard(this.gpuProfiler);
             
             // Initialize simulation with performance monitor
-            this.simulation = new FluidSimulation(this.webglContext, this.performanceMonitor);
+            this.simulation = new FluidSimulation3D(this.webglContext, this.performanceMonitor);
             
             // Initialize renderer with performance monitor
-            this.renderer = new Renderer(this.webglContext, this.displayCanvas, this.simulation, this.performanceMonitor);
+            this.renderer = new Renderer3D(this.webglContext, this.displayCanvas, this.simulation, this.performanceMonitor);
             
             // Initialize input handler
-            this.inputHandler = new InputHandler(this.displayCanvas, this.simulation);
+            this.inputHandler = new InputHandler(this.displayCanvas, this.simulation, this.renderer);
             
             // Initialize UI controller
-            this.uiController = new UIController(this.simulation);
+            this.uiController = new UIController(this.simulation, this.renderer);
             this.uiController.setAnimateCallback(() => this.animate());
             
             // Initialize instructions modal

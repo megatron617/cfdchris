@@ -3,7 +3,7 @@
  */
 
 import { CONFIG } from './config.js';
-import * as Shaders from './shaders.js';
+import * as Shaders from './shaders3d.js';
 
 export class WebGLContext {
     constructor(canvas) {
@@ -26,6 +26,11 @@ export class WebGLContext {
         // Try to enable linear filtering for float textures
         this.floatLinear = this.gl.getExtension('OES_texture_float_linear');
         console.log('Float linear filtering:', this.floatLinear ? 'supported' : 'NOT supported');
+        
+        // Log 3D texture support
+        console.log('WebGL2 3D textures: supported');
+        console.log('Target grid resolution:', `${CONFIG.gridSize.x}×${CONFIG.gridSize.y}×${CONFIG.gridSize.z}`);
+        console.log('Total voxels:', (CONFIG.gridSize.x * CONFIG.gridSize.y * CONFIG.gridSize.z / 1000000).toFixed(2) + 'M');
 
         this.programs = this.createPrograms();
         this.quadBuffer = this.createQuadBuffer();
@@ -47,12 +52,17 @@ export class WebGLContext {
         return shader;
     }
 
-    createProgram(fragmentShaderSource) {
+    createProgram(vertexShaderSource, fragmentShaderSource) {
         const gl = this.gl;
         const program = gl.createProgram();
         
-        const vs = this.createShader(gl.VERTEX_SHADER, Shaders.vertexShader);
+        const vs = this.createShader(gl.VERTEX_SHADER, vertexShaderSource);
         const fs = this.createShader(gl.FRAGMENT_SHADER, fragmentShaderSource);
+        
+        if (!vs || !fs) {
+            console.error('Failed to create shaders');
+            return null;
+        }
         
         gl.attachShader(program, vs);
         gl.attachShader(program, fs);
@@ -68,14 +78,36 @@ export class WebGLContext {
     }
 
     createPrograms() {
-        return {
-            advect: this.createProgram(Shaders.advectFragmentShader),
-            jacobi: this.createProgram(Shaders.jacobiFragmentShader),
-            divergence: this.createProgram(Shaders.divergenceFragmentShader),
-            gradient: this.createProgram(Shaders.gradientFragmentShader),
-            splat: this.createProgram(Shaders.splatFragmentShader),
-            display: this.createProgram(Shaders.displayFragmentShader)
+        console.log('Creating 3D shader programs...');
+        
+        const programs = {
+            // Simulation programs (3D)
+            advect3D: this.createProgram(Shaders.vertexShader3D, Shaders.advect3DFragmentShader),
+            jacobi3D: this.createProgram(Shaders.vertexShader3D, Shaders.jacobi3DFragmentShader),
+            divergence3D: this.createProgram(Shaders.vertexShader3D, Shaders.divergence3DFragmentShader),
+            gradient3D: this.createProgram(Shaders.vertexShader3D, Shaders.gradient3DFragmentShader),
+            splat3D: this.createProgram(Shaders.vertexShader3D, Shaders.splat3DFragmentShader),
+            
+            // Rendering programs
+            slice3D: this.createProgram(Shaders.vertexShader, Shaders.slice3DFragmentShader),
+            display: this.createProgram(Shaders.vertexShader, Shaders.displayFragmentShader),
+            
+            // Future: Ray marching (Phase 2)
+            // rayMarch3D: this.createProgram(Shaders.vertexShader, Shaders.rayMarch3DFragmentShader),
         };
+        
+        // Verify all programs compiled successfully
+        const programNames = Object.keys(programs);
+        const validPrograms = programNames.filter(name => programs[name] !== null);
+        
+        console.log(`✓ Created ${validPrograms.length}/${programNames.length} shader programs`);
+        
+        if (validPrograms.length !== programNames.length) {
+            const failed = programNames.filter(name => programs[name] === null);
+            console.error('Failed to compile programs:', failed);
+        }
+        
+        return programs;
     }
 
     createQuadBuffer() {
@@ -90,7 +122,7 @@ export class WebGLContext {
         const gl = this.gl;
         const tex = gl.createTexture();
         gl.bindTexture(gl.TEXTURE_2D, tex);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, CONFIG.gridSize, CONFIG.gridSize, 0, gl.RGBA, gl.FLOAT, null);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, CONFIG.gridSize.x, CONFIG.gridSize.y, 0, gl.RGBA, gl.FLOAT, null);
         
         // Use LINEAR if supported, otherwise NEAREST
         const filterMode = this.floatLinear ? gl.LINEAR : gl.NEAREST;
@@ -111,10 +143,90 @@ export class WebGLContext {
         return { fbo, tex };
     }
 
+    createTexture3D(width, height, depth) {
+        const gl = this.gl;
+        const tex = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_3D, tex);
+        
+        // Allocate 3D texture
+        gl.texImage3D(
+            gl.TEXTURE_3D,
+            0,                  // mip level
+            gl.RGBA32F,         // internal format
+            width,
+            height,
+            depth,
+            0,                  // border
+            gl.RGBA,            // format
+            gl.FLOAT,           // type
+            null                // data (null = allocate but don't fill)
+        );
+        
+        // Use LINEAR if supported, otherwise NEAREST
+        const filterMode = this.floatLinear ? gl.LINEAR : gl.NEAREST;
+        gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, filterMode);
+        gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, filterMode);
+        gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE);
+        
+        return tex;
+    }
+
+    createFBO3D() {
+        const gl = this.gl;
+        const { x, y, z } = CONFIG.gridSize;
+        
+        // Create 3D texture
+        const tex = this.createTexture3D(x, y, z);
+        
+        // Create framebuffer (will attach layers individually when rendering)
+        const fbo = gl.createFramebuffer();
+        
+        console.log(`Created 3D FBO: ${x}×${y}×${z} (${(x*y*z/1000000).toFixed(2)}M voxels)`);
+        
+        return { fbo, tex, width: x, height: y, depth: z };
+    }
+
+    attachTextureLayer(fbo, texture, layer) {
+        const gl = this.gl;
+        gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+        
+        // Attach specific layer of 3D texture to framebuffer
+        gl.framebufferTextureLayer(
+            gl.FRAMEBUFFER,
+            gl.COLOR_ATTACHMENT0,
+            texture,
+            0,      // mip level
+            layer   // layer index
+        );
+        
+        // Verify framebuffer is complete
+        const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+        if (status !== gl.FRAMEBUFFER_COMPLETE) {
+            console.error(`FBO incomplete for layer ${layer}:`, status);
+            return false;
+        }
+        
+        return true;
+    }
+
     createDoubleFBO() {
         return {
             fbo1: this.createFBO(),
             fbo2: this.createFBO(),
+            swap() {
+                const temp = this.fbo1;
+                this.fbo1 = this.fbo2;
+                this.fbo2 = temp;
+            }
+        };
+    }
+
+    createDoubleFBO3D() {
+        return {
+            fbo1: this.createFBO3D(),
+            fbo2: this.createFBO3D(),
             swap() {
                 const temp = this.fbo1;
                 this.fbo1 = this.fbo2;

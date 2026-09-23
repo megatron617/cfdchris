@@ -97,9 +97,11 @@ export class GPUProfiler {
         const gl = this.gl;
         const gridSize = CONFIG.gridSize;
         
-        // RGBA32F = 4 channels × 4 bytes = 16 bytes per pixel
-        const bytesPerPixel = 16;
-        const textureSize = gridSize * gridSize * bytesPerPixel;
+        // RGBA32F = 4 channels × 4 bytes = 16 bytes per voxel
+        const bytesPerVoxel = 16;
+        
+        // For 3D textures
+        const textureSize = gridSize.x * gridSize.y * gridSize.z * bytesPerVoxel;
         
         // Count textures:
         // - velocity double buffer: 2 textures

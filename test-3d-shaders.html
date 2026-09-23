@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Shader Compilation Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a1a;
+            color: #ffffff;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #4CAF50;
+        }
+        h2 {
+            color: #2196F3;
+            margin-top: 30px;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+            background: #2a2a2a;
+        }
+        .test-result.success {
+            border-left: 4px solid #4CAF50;
+        }
+        .test-result.error {
+            border-left: 4px solid #f44336;
+        }
+        .test-result.info {
+            border-left: 4px solid #2196F3;
+        }
+        .test-result.warning {
+            border-left: 4px solid #ff9800;
+        }
+        .shader-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: #2a2a2a;
+        }
+        .shader-table th,
+        .shader-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #3a3a3a;
+        }
+        .shader-table th {
+            background: #333;
+            color: #4CAF50;
+        }
+        .status-icon {
+            font-size: 20px;
+            margin-right: 8px;
+        }
+        pre {
+            background: #000;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        canvas {
+            display: none;
+        }
+        .summary {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #4CAF50;
+        }
+        .summary.fail {
+            border-left-color: #f44336;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔷 3D Shader Compilation Test</h1>
+        <p>Testing all shader programs for 3D fluid simulation</p>
+        
+        <div id="summary"></div>
+        <div id="results"></div>
+        
+        <h2>Shader Programs</h2>
+        <table class="shader-table" id="shaderTable">
+            <thead>
+                <tr>
+                    <th>Status</th>
+                    <th>Program Name</th>
+                    <th>Type</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody id="shaderTableBody">
+            </tbody>
+        </table>
+        
+        <h2>Uniform Locations</h2>
+        <div id="uniformResults"></div>
+        
+        <canvas id="testCanvas"></canvas>
+    </div>
+
+    <script type="module">
+        import { WebGLContext } from './js/webgl-utils.js';
+        import { CONFIG } from './js/config.js';
+        import * as Shaders from './js/shaders3d.js';
+
+        const results = document.getElementById('results');
+        const summary = document.getElementById('summary');
+        const tableBody = document.getElementById('shaderTableBody');
+        const uniformResults = document.getElementById('uniformResults');
+
+        function log(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            div.textContent = message;
+            results.appendChild(div);
+            console.log(message);
+        }
+
+        function logPre(label, content) {
+            const div = document.createElement('div');
+            div.className = 'test-result info';
+            div.innerHTML = `<strong>${label}</strong><pre>${content}</pre>`;
+            results.appendChild(div);
+        }
+
+        const shaderTests = [
+            {
+                name: 'advect3D',
+                type: 'Simulation',
+                description: 'Vec3 velocity advection',
+                uniforms: ['u_velocity', 'u_source', 'u_dt', 'u_gridScale', 'u_layer']
+            },
+            {
+                name: 'jacobi3D',
+                type: 'Simulation',
+                description: '6-neighbor Jacobi iteration',
+                uniforms: ['u_x', 'u_b', 'u_alpha', 'u_rBeta', 'u_layer']
+            },
+            {
+                name: 'divergence3D',
+                type: 'Simulation',
+                description: '3D divergence calculation',
+                uniforms: ['u_velocity', 'u_layer']
+            },
+            {
+                name: 'gradient3D',
+                type: 'Simulation',
+                description: '3D pressure gradient',
+                uniforms: ['u_pressure', 'u_velocity', 'u_layer']
+            },
+            {
+                name: 'splat3D',
+                type: 'Simulation',
+                description: '3D Gaussian splat',
+                uniforms: ['u_field', 'u_point', 'u_value', 'u_radius', 'u_layer']
+            },
+            {
+                name: 'slice3D',
+                type: 'Rendering',
+                description: 'Slice visualization',
+                uniforms: ['u_field', 'u_sliceAxis', 'u_sliceDepth', 'u_brightness']
+            },
+            {
+                name: 'display',
+                type: 'Rendering',
+                description: '2D display (legacy)',
+                uniforms: ['u_field']
+            }
+        ];
+
+        async function runTests() {
+            let successCount = 0;
+            let failCount = 0;
+
+            try {
+                log('Starting 3D shader compilation tests...', 'info');
+                
+                // Create WebGL context
+                const canvas = document.getElementById('testCanvas');
+                canvas.width = 128;
+                canvas.height = 128;
+                
+                const webglContext = new WebGLContext(canvas);
+                const gl = webglContext.gl;
+                const programs = webglContext.programs;
+                
+                log('✓ WebGL2 context created', 'success');
+                log('', 'info');
+
+                // Test each shader program
+                for (const test of shaderTests) {
+                    const program = programs[test.name];
+                    const row = document.createElement('tr');
+                    
+                    if (program) {
+                        // Program compiled successfully
+                        successCount++;
+                        
+                        row.innerHTML = `
+                            <td><span class="status-icon">✅</span></td>
+                            <td><strong>${test.name}</strong></td>
+                            <td>${test.type}</td>
+                            <td>${test.description}</td>
+                        `;
+                        
+                        log(`✓ ${test.name}: Compiled successfully`, 'success');
+                        
+                        // Test uniform locations
+                        gl.useProgram(program);
+                        const uniformDiv = document.createElement('div');
+                        uniformDiv.className = 'test-result success';
+                        let uniformHTML = `<strong>${test.name} uniforms:</strong><br>`;
+                        
+                        let allUniformsValid = true;
+                        for (const uniformName of test.uniforms) {
+                            const loc = gl.getUniformLocation(program, uniformName);
+                            const status = loc !== null ? '✓' : '✗';
+                            const color = loc !== null ? '#4CAF50' : '#f44336';
+                            uniformHTML += `<span style="color: ${color}">${status} ${uniformName}</span><br>`;
+                            
+                            if (loc === null && !uniformName.includes('layer')) {
+                                // Layer uniform might not exist in non-3D shaders
+                                allUniformsValid = false;
+                                log(`  ⚠️  Uniform '${uniformName}' not found`, 'warning');
+                            }
+                        }
+                        
+                        uniformDiv.innerHTML = uniformHTML;
+                        uniformResults.appendChild(uniformDiv);
+                        
+                    } else {
+                        // Program compilation failed
+                        failCount++;
+                        
+                        row.innerHTML = `
+                            <td><span class="status-icon">❌</span></td>
+                            <td><strong>${test.name}</strong></td>
+                            <td>${test.type}</td>
+                            <td>${test.description}</td>
+                        `;
+                        
+                        log(`✗ ${test.name}: Compilation FAILED`, 'error');
+                    }
+                    
+                    tableBody.appendChild(row);
+                }
+
+                // Summary
+                const totalTests = shaderTests.length;
+                const summaryDiv = document.createElement('div');
+                summaryDiv.className = failCount === 0 ? 'summary' : 'summary fail';
+                
+                if (failCount === 0) {
+                    summaryDiv.innerHTML = `
+                        <h2 style="color: #4CAF50; margin: 0;">🎉 All Shaders Compiled Successfully!</h2>
+                        <p style="margin: 10px 0 0 0;">
+                            <strong>${successCount}/${totalTests}</strong> shader programs compiled and linked successfully.
+                        </p>
+                        <p style="margin: 10px 0 0 0; color: #888;">
+                            Ready to proceed to Task 3: Layer-by-layer 3D simulation loop
+                        </p>
+                    `;
+                    log('', 'info');
+                    log('🎉 All shader programs compiled successfully!', 'success');
+                } else {
+                    summaryDiv.innerHTML = `
+                        <h2 style="color: #f44336; margin: 0;">⚠️ Some Shaders Failed</h2>
+                        <p style="margin: 10px 0 0 0;">
+                            <strong>${successCount}/${totalTests}</strong> succeeded, 
+                            <strong>${failCount}/${totalTests}</strong> failed.
+                        </p>
+                        <p style="margin: 10px 0 0 0; color: #888;">
+                            Check console for detailed error messages.
+                        </p>
+                    `;
+                    log('', 'info');
+                    log(`⚠️  ${failCount} shader(s) failed to compile`, 'error');
+                }
+                
+                summary.appendChild(summaryDiv);
+
+                // Log shader info
+                log('', 'info');
+                log('Shader Configuration:', 'info');
+                logPre('Grid Size', JSON.stringify(CONFIG.gridSize, null, 2));
+                logPre('Shader Metadata', JSON.stringify(Shaders.SHADER_INFO, null, 2));
+
+            } catch (error) {
+                log(`✗ Fatal error: ${error.message}`, 'error');
+                console.error(error);
+                
+                const summaryDiv = document.createElement('div');
+                summaryDiv.className = 'summary fail';
+                summaryDiv.innerHTML = `
+                    <h2 style="color: #f44336; margin: 0;">❌ Fatal Error</h2>
+                    <p style="margin: 10px 0 0 0;">${error.message}</p>
+                `;
+                summary.appendChild(summaryDiv);
+            }
+        }
+
+        runTests();
+    </script>
+</body>
+</html>

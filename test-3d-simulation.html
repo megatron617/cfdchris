@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Simulation Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a1a;
+            color: #ffffff;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #4CAF50;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+            background: #2a2a2a;
+        }
+        .test-result.success {
+            border-left: 4px solid #4CAF50;
+        }
+        .test-result.error {
+            border-left: 4px solid #f44336;
+        }
+        .test-result.info {
+            border-left: 4px solid #2196F3;
+        }
+        .test-result.warning {
+            border-left: 4px solid #ff9800;
+        }
+        pre {
+            background: #000;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .metric-card {
+            background: #2a2a2a;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #4CAF50;
+        }
+        .metric-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+        .metric-label {
+            font-size: 12px;
+            color: #888;
+            margin-top: 5px;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        canvas {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔷 3D Simulation Layer-by-Layer Test</h1>
+        <p>Testing 3D fluid simulation with layer-based rendering</p>
+        
+        <div>
+            <button id="runSimStep">Run Simulation Step</button>
+            <button id="runSplat">Test 3D Splat</button>
+            <button id="clearSim">Clear Simulation</button>
+        </div>
+        
+        <div class="metrics" id="metrics"></div>
+        <div id="results"></div>
+        
+        <canvas id="testCanvas"></canvas>
+    </div>
+
+    <script type="module">
+        import { WebGLContext } from './js/webgl-utils.js';
+        import { FluidSimulation3D } from './js/simulation3d.js';
+        import { CONFIG } from './js/config.js';
+
+        const results = document.getElementById('results');
+        const metricsDiv = document.getElementById('metrics');
+        let simulation = null;
+        let webglContext = null;
+        let frameCount = 0;
+        let startTime = performance.now();
+
+        function log(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            div.innerHTML = message;
+            results.appendChild(div);
+            console.log(message);
+        }
+
+        function updateMetrics() {
+            const elapsed = (performance.now() - startTime) / 1000;
+            const fps = frameCount / elapsed;
+            const diagnostics = simulation.getDiagnostics();
+            
+            metricsDiv.innerHTML = `
+                <div class="metric-card">
+                    <div class="metric-value">${frameCount}</div>
+                    <div class="metric-label">Simulation Steps</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">${fps.toFixed(1)}</div>
+                    <div class="metric-label">Average FPS</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">${(diagnostics.totalVoxels / 1000000).toFixed(2)}M</div>
+                    <div class="metric-label">Total Voxels</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">${diagnostics.params.iterations}</div>
+                    <div class="metric-label">Jacobi Iterations</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">${diagnostics.gridSize.x}×${diagnostics.gridSize.y}×${diagnostics.gridSize.z}</div>
+                    <div class="metric-label">Grid Size</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">${elapsed.toFixed(1)}s</div>
+                    <div class="metric-label">Total Time</div>
+                </div>
+            `;
+        }
+
+        async function init() {
+            try {
+                log('Initializing 3D simulation test...', 'info');
+                
+                // Create WebGL context
+                const canvas = document.getElementById('testCanvas');
+                canvas.width = CONFIG.gridSize.x;
+                canvas.height = CONFIG.gridSize.y;
+                
+                webglContext = new WebGLContext(canvas);
+                log('✓ WebGL2 context created', 'success');
+                
+                // Create 3D simulation
+                simulation = new FluidSimulation3D(webglContext);
+                log('✓ 3D simulation created', 'success');
+                
+                // Log diagnostics
+                const diag = simulation.getDiagnostics();
+                log(`Grid: ${diag.gridSize.x}×${diag.gridSize.y}×${diag.gridSize.z}`, 'info');
+                log(`Total voxels: ${(diag.totalVoxels/1000000).toFixed(2)}M`, 'info');
+                log(`Iterations: ${diag.params.iterations}`, 'info');
+                
+                updateMetrics();
+                
+                log('', 'info');
+                log('✓ Ready to test! Click buttons above to run tests.', 'success');
+                
+            } catch (error) {
+                log(`✗ Error: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+
+        // Run single simulation step
+        document.getElementById('runSimStep').addEventListener('click', () => {
+            try {
+                const start = performance.now();
+                simulation.step();
+                const elapsed = performance.now() - start;
+                
+                frameCount++;
+                updateMetrics();
+                
+                log(`✓ Simulation step completed in ${elapsed.toFixed(1)}ms`, 'success');
+            } catch (error) {
+                log(`✗ Simulation step failed: ${error.message}`, 'error');
+                console.error(error);
+            }
+        });
+
+        // Test 3D splat
+        document.getElementById('runSplat').addEventListener('click', () => {
+            try {
+                const start = performance.now();
+                
+                // Splat at center with random velocity
+                simulation.splat3D(
+                    simulation.velocity,
+                    0.5, 0.5, 0.5,  // center position
+                    Math.random() - 0.5,
+                    Math.random() - 0.5,
+                    Math.random() - 0.5
+                );
+                
+                // Splat random color dye
+                simulation.splat3D(
+                    simulation.dye,
+                    0.5, 0.5, 0.5,
+                    Math.random(),
+                    Math.random(),
+                    Math.random()
+                );
+                
+                const elapsed = performance.now() - start;
+                log(`✓ 3D splat completed in ${elapsed.toFixed(1)}ms`, 'success');
+            } catch (error) {
+                log(`✗ 3D splat failed: ${error.message}`, 'error');
+                console.error(error);
+            }
+        });
+
+        // Clear simulation
+        document.getElementById('clearSim').addEventListener('click', () => {
+            try {
+                const start = performance.now();
+                simulation.clear();
+                const elapsed = performance.now() - start;
+                
+                frameCount = 0;
+                startTime = performance.now();
+                updateMetrics();
+                
+                log(`✓ Simulation cleared in ${elapsed.toFixed(1)}ms`, 'success');
+            } catch (error) {
+                log(`✗ Clear failed: ${error.message}`, 'error');
+                console.error(error);
+            }
+        });
+
+        init();
+    </script>
+</body>
+</html>

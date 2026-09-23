@@ -26,7 +26,7 @@ export class Renderer {
         
         // Render dye to WebGL canvas
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-        gl.viewport(0, 0, CONFIG.gridSize, CONFIG.gridSize);
+        gl.viewport(0, 0, CONFIG.gridSize.x, CONFIG.gridSize.y);
         
         // Clear to black
         gl.clearColor(0, 0, 0, 1);
