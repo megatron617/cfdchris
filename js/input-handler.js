@@ -3,6 +3,7 @@
  */
 
 import { ColorMode, CURRENT_COLOR_MODE } from './config.js';
+import { Raycaster3D } from './raycaster3d.js';
 
 export class InputHandler {
     constructor(canvas, simulation, renderer = null, camera = null) {
@@ -16,6 +17,12 @@ export class InputHandler {
         this.mouseY = 0;
         this.prevX = 0;
         this.prevY = 0;
+        
+        // Create raycaster if camera is available
+        this.raycaster = camera ? new Raycaster3D(camera) : null;
+        
+        // Track last raycast result for debugging
+        this.lastRaycast = null;
         
         this.setupEventListeners();
     }
@@ -138,17 +145,37 @@ export class InputHandler {
         const dx = (this.mouseX - this.prevX) * this.simulation.params.forceMultiplier;
         const dy = (this.mouseY - this.prevY) * this.simulation.params.forceMultiplier;
         
-        // Inject at current slice depth if renderer is available
-        // Otherwise default to center (z = 0.5)
-        const z = this.renderer?.sliceDepth ?? 0.5;
-        const dz = 0.0;  // No Z-velocity for now (Task 6 will add this)
+        // Try raycasting first (if camera and raycaster available)
+        let x = this.mouseX;
+        let y = this.mouseY;
+        let z = 0.5;  // Default to center
+        
+        if (this.raycaster) {
+            const result = this.raycaster.castRay(this.mouseX, this.mouseY);
+            this.lastRaycast = result;  // Store for debugging
+            
+            if (result.hit) {
+                // Use raycast intersection point
+                x = result.point[0];
+                y = result.point[1];
+                z = result.point[2];
+            } else {
+                // Ray missed volume, fall back to slice depth
+                z = this.renderer?.sliceDepth ?? 0.5;
+            }
+        } else {
+            // No raycaster, use current slice depth
+            z = this.renderer?.sliceDepth ?? 0.5;
+        }
+        
+        const dz = 0.0;  // No Z-velocity for now
         
         // Add velocity (3D splat)
-        this.simulation.splat3D(this.simulation.velocity, this.mouseX, this.mouseY, z, dx, dy, dz);
+        this.simulation.splat3D(this.simulation.velocity, x, y, z, dx, dy, dz);
         
         // Add dye color (3D splat)
         const color = this.getColor(dx, dy);
-        this.simulation.splat3D(this.simulation.dye, this.mouseX, this.mouseY, z, color.r, color.g, color.b);
+        this.simulation.splat3D(this.simulation.dye, x, y, z, color.r, color.g, color.b);
     }
 
     getColor(dx, dy) {

@@ -446,7 +446,49 @@ color = texture(u_field, samplePos);
 
 ---
 
-### 🔄 Task 6: 3D Raycasting for Mouse Interaction
+### ✅ Task 6: 3D Raycasting for Mouse Interaction - COMPLETE
+
+**Objective**: Cast rays from 2D screen coordinates into 3D space for accurate painting
+
+**Files Created:**
+- `js/raycaster3d.js` - Raycaster3D class with ray-box intersection
+- `test-raycast.html` - Visual raycasting test with cube visualization
+
+**Files Modified:**
+- `js/input-handler.js` - Uses raycasting for splat position, falls back to slice depth
+- `js/main.js` - Updates raycast info display
+- `index.html` - Added raycast info panel (hit status, 3D point)
+
+**Implementation Details:**
+- **Screen to Ray:** Unprojection from 2D screen (0-1) → NDC (-1 to 1) → 3D world space
+- **Ray-Box Intersection:** Slab method testing against unit cube [0,0,0] to [1,1,1]
+- **Matrix Operations:** Full 4×4 matrix multiplication and inversion
+- **Fallback Strategy:** If ray misses volume, uses current slice depth
+- **Perspective Divide:** Handles perspective projection correctly
+
+**Algorithm:**
+1. Convert screen coordinates (x, y) to NDC
+2. Unproject near plane (z=-1) and far plane (z=1) to world space
+3. Compute ray direction from near to far
+4. Test ray against axis-aligned bounding box (AABB)
+5. Return intersection point or miss
+
+**Benefits:**
+- Paint anywhere in 3D volume by clicking
+- Natural interaction (click where you see)
+- Works from any camera angle
+- Graceful fallback if ray misses
+
+**Testing:**
+- `test-raycast.html` shows live ray intersection with visualized cube
+- Green = ray hit, Red = ray miss
+- Displays ray origin, direction, and hit point
+
+**Status**: Raycasting fully functional, enhancing 3D interaction
+
+---
+
+### 🔄 Task 7: Performance Optimization
 
 **Files to Create/Modify**:
 - Create `js/shaders3d.js` (will replace `shaders.js`)

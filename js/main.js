@@ -169,6 +169,25 @@ class FluidApp {
         if (azimuthElem) azimuthElem.textContent = info.azimuth;
         if (elevationElem) elevationElem.textContent = info.elevation;
         if (distanceElem) distanceElem.textContent = info.distance;
+        
+        // Update raycast info
+        if (this.inputHandler && this.inputHandler.lastRaycast) {
+            const rayHitElem = document.getElementById('ray-hit');
+            const rayPointElem = document.getElementById('ray-point');
+            
+            const result = this.inputHandler.lastRaycast;
+            
+            if (rayHitElem) {
+                rayHitElem.textContent = result.hit ? '✓ Yes' : '✗ No';
+                rayHitElem.style.color = result.hit ? '#4f4' : '#f44';
+            }
+            
+            if (rayPointElem && result.hit) {
+                const p = result.point;
+                rayPointElem.textContent = `[${p[0].toFixed(2)}, ${p[1].toFixed(2)}, ${p[2].toFixed(2)}]`;
+                rayPointElem.style.color = '#4af';
+            }
+        }
     }
 }
 

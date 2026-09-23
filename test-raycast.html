@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Raycast Test - 3D Volume Intersection</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: monospace;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        #container {
+            display: flex;
+            gap: 20px;
+        }
+        #test-canvas {
+            border: 2px solid #444;
+            cursor: crosshair;
+            background: #000;
+        }
+        #info {
+            flex: 1;
+            padding: 10px;
+            background: #2a2a2a;
+            border: 1px solid #444;
+        }
+        .value {
+            color: #4af;
+        }
+        .hit { color: #4f4; }
+        .miss { color: #f44; }
+        h3 { margin-top: 0; border-bottom: 1px solid #444; padding-bottom: 5px; }
+    </style>
+</head>
+<body>
+    <h2>3D Raycasting Test</h2>
+    <div id="container">
+        <canvas id="test-canvas" width="500" height="500"></canvas>
+        
+        <div id="info">
+            <h3>Camera</h3>
+            <div>Azimuth: <span class="value" id="azimuth">0.0°</span></div>
+            <div>Elevation: <span class="value" id="elevation">0.0°</span></div>
+            <div>Distance: <span class="value" id="distance">2.50</span></div>
+            <div>Position: <span class="value" id="position">[0, 0, 0]</span></div>
+            
+            <h3>Mouse</h3>
+            <div>Screen: <span class="value" id="mouse-screen">-</span></div>
+            <div>NDC: <span class="value" id="mouse-ndc">-</span></div>
+            
+            <h3>Raycast</h3>
+            <div>Ray Origin: <span class="value" id="ray-origin">-</span></div>
+            <div>Ray Direction: <span class="value" id="ray-dir">-</span></div>
+            <div>Hit: <span class="value" id="ray-hit">-</span></div>
+            <div>Point: <span class="value" id="ray-point">-</span></div>
+            <div>Distance: <span class="value" id="ray-distance">-</span></div>
+            
+            <h3>Instructions</h3>
+            <div style="font-size: 12px; color: #888; line-height: 1.5;">
+                • MOVE MOUSE: Cast ray into volume<br>
+                • RIGHT-CLICK + DRAG: Rotate camera<br>
+                • MOUSE WHEEL: Zoom<br>
+                • R KEY: Reset camera<br>
+                <br>
+                <strong>Green</strong> = Ray hit volume<br>
+                <strong>Red</strong> = Ray missed volume
+            </div>
+        </div>
+    </div>
+    
+    <script type="module">
+        import { OrbitController } from './js/camera3d.js';
+        import { Raycaster3D } from './js/raycaster3d.js';
+        
+        const canvas = document.getElementById('test-canvas');
+        const ctx = canvas.getContext('2d');
+        const camera = new OrbitController();
+        const raycaster = new Raycaster3D(camera);
+        
+        camera.setAspect(1.0);  // Square canvas
+        
+        let rightMouseDown = false;
+        let prevX = 0;
+        let prevY = 0;
+        let mouseX = 0;
+        let mouseY = 0;
+        let currentRaycast = null;
+        
+        // Mouse events
+        canvas.addEventListener('mousedown', (e) => {
+            if (e.button === 2) {
+                rightMouseDown = true;
+                const rect = canvas.getBoundingClientRect();
+                prevX = mouseX = e.clientX - rect.left;
+                prevY = mouseY = e.clientY - rect.top;
+            }
+        });
+        
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            
+            if (rightMouseDown) {
+                prevX = mouseX;
+                prevY = mouseY;
+                mouseX = e.clientX - rect.left;
+                mouseY = e.clientY - rect.top;
+                
+                const deltaX = mouseX - prevX;
+                const deltaY = mouseY - prevY;
+                
+                camera.rotate(deltaX, deltaY);
+            } else {
+                // Just update mouse position
+                mouseX = e.clientX - rect.left;
+                mouseY = e.clientY - rect.top;
+                
+                // Perform raycast
+                const normX = mouseX / canvas.width;
+                const normY = 1.0 - (mouseY / canvas.height);  // Flip Y
+                currentRaycast = raycaster.castRay(normX, normY);
+                
+                updateInfo(normX, normY);
+            }
+            
+            draw();
+        });
+        
+        canvas.addEventListener('mouseup', (e) => {
+            if (e.button === 2) {
+                rightMouseDown = false;
+            }
+        });
+        
+        canvas.addEventListener('mouseleave', () => {
+            rightMouseDown = false;
+        });
+        
+        canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+        
+        canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            camera.zoom(e.deltaY * 0.01);
+            draw();
+        });
+        
+        // Keyboard
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'r' || e.key === 'R') {
+                camera.reset();
+                draw();
+            }
+        });
+        
+        // Update info display
+        function updateInfo(screenX, screenY) {
+            const info = camera.getInfo();
+            
+            document.getElementById('azimuth').textContent = info.azimuth;
+            document.getElementById('elevation').textContent = info.elevation;
+            document.getElementById('distance').textContent = info.distance;
+            document.getElementById('position').textContent = `[${info.position.join(', ')}]`;
+            
+            // Mouse info
+            document.getElementById('mouse-screen').textContent = 
+                `(${screenX.toFixed(3)}, ${screenY.toFixed(3)})`;
+            
+            const ndcX = screenX * 2 - 1;
+            const ndcY = screenY * 2 - 1;
+            document.getElementById('mouse-ndc').textContent = 
+                `(${ndcX.toFixed(3)}, ${ndcY.toFixed(3)})`;
+            
+            // Raycast info
+            if (currentRaycast) {
+                document.getElementById('ray-hit').textContent = 
+                    currentRaycast.hit ? '✓ HIT' : '✗ MISS';
+                document.getElementById('ray-hit').className = 
+                    currentRaycast.hit ? 'hit' : 'miss';
+                
+                if (currentRaycast.hit) {
+                    const p = currentRaycast.point;
+                    document.getElementById('ray-point').textContent = 
+                        `[${p[0].toFixed(3)}, ${p[1].toFixed(3)}, ${p[2].toFixed(3)}]`;
+                    document.getElementById('ray-distance').textContent = 
+                        currentRaycast.distance.toFixed(3);
+                } else {
+                    document.getElementById('ray-point').textContent = 'N/A';
+                    document.getElementById('ray-distance').textContent = 'Infinity';
+                }
+            }
+        }
+        
+        // Draw visualization
+        function draw() {
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw grid
+            ctx.strokeStyle = '#222';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= 10; i++) {
+                const x = (i / 10) * canvas.width;
+                const y = (i / 10) * canvas.height;
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+            
+            // Project cube corners to screen
+            const cubeCorners = [
+                [0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0],  // Front face
+                [0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]   // Back face
+            ];
+            
+            const viewMatrix = camera.getViewMatrix();
+            const projMatrix = camera.getProjectionMatrix();
+            
+            const projectedCorners = cubeCorners.map(corner => {
+                return projectPoint(corner, viewMatrix, projMatrix);
+            });
+            
+            // Draw cube edges
+            ctx.strokeStyle = '#4af';
+            ctx.lineWidth = 2;
+            
+            // Front face
+            drawLine(projectedCorners[0], projectedCorners[1]);
+            drawLine(projectedCorners[1], projectedCorners[2]);
+            drawLine(projectedCorners[2], projectedCorners[3]);
+            drawLine(projectedCorners[3], projectedCorners[0]);
+            
+            // Back face
+            drawLine(projectedCorners[4], projectedCorners[5]);
+            drawLine(projectedCorners[5], projectedCorners[6]);
+            drawLine(projectedCorners[6], projectedCorners[7]);
+            drawLine(projectedCorners[7], projectedCorners[4]);
+            
+            // Connecting edges
+            drawLine(projectedCorners[0], projectedCorners[4]);
+            drawLine(projectedCorners[1], projectedCorners[5]);
+            drawLine(projectedCorners[2], projectedCorners[6]);
+            drawLine(projectedCorners[3], projectedCorners[7]);
+            
+            // Draw raycast hit point if available
+            if (currentRaycast && currentRaycast.hit) {
+                const hitScreen = projectPoint(currentRaycast.point, viewMatrix, projMatrix);
+                
+                ctx.fillStyle = '#4f4';
+                ctx.beginPath();
+                ctx.arc(hitScreen[0], hitScreen[1], 8, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.strokeStyle = '#4f4';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
+            
+            // Draw mouse cursor
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(mouseX, mouseY, 5, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+        
+        function projectPoint(point, viewMatrix, projMatrix) {
+            // Apply view matrix
+            const x = viewMatrix[0] * point[0] + viewMatrix[4] * point[1] + viewMatrix[8] * point[2] + viewMatrix[12];
+            const y = viewMatrix[1] * point[0] + viewMatrix[5] * point[1] + viewMatrix[9] * point[2] + viewMatrix[13];
+            const z = viewMatrix[2] * point[0] + viewMatrix[6] * point[1] + viewMatrix[10] * point[2] + viewMatrix[14];
+            const w = viewMatrix[3] * point[0] + viewMatrix[7] * point[1] + viewMatrix[11] * point[2] + viewMatrix[15];
+            
+            // Apply projection matrix
+            const x2 = projMatrix[0] * x + projMatrix[4] * y + projMatrix[8] * z + projMatrix[12] * w;
+            const y2 = projMatrix[1] * x + projMatrix[5] * y + projMatrix[9] * z + projMatrix[13] * w;
+            const w2 = projMatrix[3] * x + projMatrix[7] * y + projMatrix[11] * z + projMatrix[15] * w;
+            
+            // Perspective divide
+            const ndcX = x2 / w2;
+            const ndcY = y2 / w2;
+            
+            // Convert to screen space
+            const screenX = (ndcX + 1) * 0.5 * canvas.width;
+            const screenY = (1 - (ndcY + 1) * 0.5) * canvas.height;  // Flip Y
+            
+            return [screenX, screenY];
+        }
+        
+        function drawLine(p1, p2) {
+            ctx.beginPath();
+            ctx.moveTo(p1[0], p1[1]);
+            ctx.lineTo(p2[0], p2[1]);
+            ctx.stroke();
+        }
+        
+        // Initial draw
+        draw();
+        
+        console.log('Raycast test page loaded');
+        console.log('Camera:', camera);
+        console.log('Raycaster:', raycaster);
+    </script>
+</body>
+</html>
