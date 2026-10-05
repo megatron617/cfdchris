@@ -61,6 +61,8 @@ export class InputHandler {
         const pos = this.getCanvasPosition(e.clientX, e.clientY);
         this.prevX = this.mouseX = pos.x;
         this.prevY = this.mouseY = pos.y;
+
+        this.applyForce();
     }
 
     onMouseMove(e) {
@@ -145,35 +147,23 @@ export class InputHandler {
         const dx = (this.mouseX - this.prevX) * this.simulation.params.forceMultiplier;
         const dy = (this.mouseY - this.prevY) * this.simulation.params.forceMultiplier;
         
-        // Try raycasting first (if camera and raycaster available)
-        let x = this.mouseX;
-        let y = this.mouseY;
-        let z = 0.5;  // Default to center
-        
-        if (this.raycaster) {
-            const result = this.raycaster.castRay(this.mouseX, this.mouseY);
-            this.lastRaycast = result;  // Store for debugging
-            
-            if (result.hit) {
-                // Use raycast intersection point
-                x = result.point[0];
-                y = result.point[1];
-                z = result.point[2];
-            } else {
-                // Ray missed volume, fall back to slice depth
-                z = this.renderer?.sliceDepth ?? 0.5;
-            }
-        } else {
-            // No raycaster, use current slice depth
-            z = this.renderer?.sliceDepth ?? 0.5;
-        }
+        // In slice rendering mode, inject at the currently displayed layer depth.
+        // The raycaster returns the front face of the volume (Z=1 from default camera),
+        // which ignores the depth slider — not useful until ray marching (Task 8).
+        const x = this.mouseX;
+        const y = this.mouseY;
+        const z = this.renderer?.sliceDepth ?? 0.5;
         
         const dz = 0.0;  // No Z-velocity for now
         
-        // Add velocity (3D splat)
-        this.simulation.splat3D(this.simulation.velocity, x, y, z, dx, dy, dz);
+        // Only inject velocity when the mouse is actually moving (dx or dy non-zero).
+        // A stationary click injects dye only — no velocity perturbation.
+        const hasMotion = Math.abs(dx) > 0.001 || Math.abs(dy) > 0.001;
+        if (hasMotion) {
+            this.simulation.splat3D(this.simulation.velocity, x, y, z, dx, dy, dz);
+        }
         
-        // Add dye color (3D splat)
+        // Always inject dye color
         const color = this.getColor(dx, dy);
         this.simulation.splat3D(this.simulation.dye, x, y, z, color.r, color.g, color.b);
     }

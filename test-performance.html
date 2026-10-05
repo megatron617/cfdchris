@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Performance Optimization Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: monospace;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        #container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .panel {
+            background: #2a2a2a;
+            border: 1px solid #444;
+            border-radius: 5px;
+            padding: 15px;
+        }
+        h3 {
+            margin-top: 0;
+            color: #4a90e2;
+            border-bottom: 1px solid #444;
+            padding-bottom: 5px;
+        }
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+            padding: 5px;
+            background: #1a1a1a;
+            border-radius: 3px;
+        }
+        .metric-label {
+            color: #aaa;
+        }
+        .metric-value {
+            color: #4af;
+            font-weight: bold;
+        }
+        .status-optimal { color: #4f4; }
+        .status-acceptable { color: #ff4; }
+        .status-poor { color: #fa4; }
+        .status-critical { color: #f44; }
+        button {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            background: #4a90e2;
+            border: none;
+            border-radius: 4px;
+            color: white;
+            cursor: pointer;
+            font-family: monospace;
+        }
+        button:hover {
+            background: #357abd;
+        }
+        button:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
+        .preset-btn {
+            padding: 8px;
+            margin: 2px;
+        }
+        .preset-btn.active {
+            background: #2a7;
+        }
+        .suggestion {
+            background: rgba(255, 150, 0, 0.2);
+            border-left: 3px solid #fa0;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 3px;
+        }
+        .suggestion-actions {
+            margin-top: 5px;
+            font-size: 11px;
+            color: #aaa;
+        }
+    </style>
+</head>
+<body>
+    <h2>Performance Optimization Test</h2>
+    <div id="container">
+        <div class="panel">
+            <h3>Current Performance</h3>
+            <div class="metric">
+                <span class="metric-label">FPS:</span>
+                <span class="metric-value" id="fps">-</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">Status:</span>
+                <span class="metric-value" id="status">-</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">Frame Time:</span>
+                <span class="metric-value" id="frame-time">-</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">Iterations:</span>
+                <span class="metric-value" id="iterations">-</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">Preset:</span>
+                <span class="metric-value" id="preset">-</span>
+            </div>
+        </div>
+        
+        <div class="panel">
+            <h3>Quality Presets</h3>
+            <button class="preset-btn" data-preset="potato">Potato (15 iter)</button>
+            <button class="preset-btn" data-preset="low">Low (20 iter)</button>
+            <button class="preset-btn" data-preset="medium">Medium (30 iter)</button>
+            <button class="preset-btn" data-preset="high">High (40 iter)</button>
+            <button class="preset-btn" data-preset="ultra">Ultra (50 iter)</button>
+            
+            <h3 style="margin-top: 20px;">Auto-Optimization</h3>
+            <label>
+                <input type="checkbox" id="auto-opt"> Enable auto-optimize
+            </label>
+            <p style="font-size: 11px; color: #888; margin-top: 10px;">
+                Automatically reduces quality when FPS drops below 30
+            </p>
+        </div>
+        
+        <div class="panel">
+            <h3>Benchmark</h3>
+            <button id="bench-5s">Run 5s Benchmark</button>
+            <button id="bench-10s">Run 10s Benchmark</button>
+            <div id="bench-result" style="margin-top: 15px;"></div>
+        </div>
+        
+        <div class="panel">
+            <h3>Suggestions</h3>
+            <div id="suggestions">
+                <p style="color: #888;">Run benchmark or wait for performance data...</p>
+            </div>
+        </div>
+    </div>
+    
+    <script type="module">
+        import { WebGLContext } from './js/webgl-utils.js';
+        import { FluidSimulation3D } from './js/simulation3d.js';
+        import { GPUProfiler } from './js/gpu-profiler.js';
+        import { PerformanceMonitor } from './js/performance-monitor.js';
+        import { PerformanceOptimizer } from './js/performance-optimizer.js';
+        
+        // Setup minimal simulation for testing
+        const canvas = document.createElement('canvas');
+        canvas.width = 128;
+        canvas.height = 128;
+        
+        const webglContext = new WebGLContext(canvas);
+        const gpuProfiler = new GPUProfiler(webglContext.gl);
+        const performanceMonitor = new PerformanceMonitor(gpuProfiler);
+        const simulation = new FluidSimulation3D(webglContext, performanceMonitor);
+        const optimizer = new PerformanceOptimizer(simulation, performanceMonitor);
+        
+        // Update display
+        function updateDisplay() {
+            const status = optimizer.getStatus();
+            const metrics = performanceMonitor.getMetrics();
+            
+            document.getElementById('fps').textContent = status.fps.toFixed(1);
+            document.getElementById('status').textContent = status.status.toUpperCase();
+            document.getElementById('status').className = 'metric-value status-' + status.status;
+            document.getElementById('frame-time').textContent = metrics.frame.avg.toFixed(2) + ' ms';
+            document.getElementById('iterations').textContent = status.iterations;
+            document.getElementById('preset').textContent = status.preset.toUpperCase();
+            
+            // Update suggestions
+            const suggestionsDiv = document.getElementById('suggestions');
+            if (status.suggestions.length > 0) {
+                suggestionsDiv.innerHTML = status.suggestions.map(s => `
+                    <div class="suggestion">
+                        <strong>${s.message}</strong>
+                        <div class="suggestion-actions">
+                            ${s.actions.map(a => `• ${a}`).join('<br>')}
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                suggestionsDiv.innerHTML = '<p style="color: #4f4;">✓ Performance is optimal!</p>';
+            }
+            
+            // Update active preset button
+            document.querySelectorAll('.preset-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.preset === status.preset);
+            });
+        }
+        
+        // Preset buttons
+        document.querySelectorAll('.preset-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                optimizer.applyPreset(btn.dataset.preset);
+                updateDisplay();
+            });
+        });
+        
+        // Auto-optimize toggle
+        document.getElementById('auto-opt').addEventListener('change', (e) => {
+            optimizer.setAutoOptimize(e.target.checked);
+        });
+        
+        // Benchmark buttons
+        document.getElementById('bench-5s').addEventListener('click', async () => {
+            await runBenchmark(5000);
+        });
+        
+        document.getElementById('bench-10s').addEventListener('click', async () => {
+            await runBenchmark(10000);
+        });
+        
+        async function runBenchmark(duration) {
+            const btn5 = document.getElementById('bench-5s');
+            const btn10 = document.getElementById('bench-10s');
+            const resultDiv = document.getElementById('bench-result');
+            
+            btn5.disabled = true;
+            btn10.disabled = true;
+            resultDiv.innerHTML = '<p style="color: #fa0;">⏱️ Benchmarking...</p>';
+            
+            const result = await optimizer.benchmark(duration);
+            
+            btn5.disabled = false;
+            btn10.disabled = false;
+            
+            resultDiv.innerHTML = `
+                <div class="metric">
+                    <span class="metric-label">Average FPS:</span>
+                    <span class="metric-value">${result.avgFPS.toFixed(1)}</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Min FPS:</span>
+                    <span class="metric-value">${result.minFPS.toFixed(1)}</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Max FPS:</span>
+                    <span class="metric-value">${result.maxFPS.toFixed(1)}</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Recommended:</span>
+                    <span class="metric-value">${result.recommendation.toUpperCase()}</span>
+                </div>
+            `;
+            
+            updateDisplay();
+        }
+        
+        // Animation loop
+        function animate() {
+            performanceMonitor.startFrame();
+            
+            simulation.step();
+            
+            performanceMonitor.endFrame();
+            
+            optimizer.update();
+            
+            requestAnimationFrame(animate);
+        }
+        
+        // Update UI periodically
+        setInterval(updateDisplay, 100);
+        
+        // Start
+        animate();
+        updateDisplay();
+        
+        console.log('Performance test page loaded');
+        console.log('Simulation:', simulation);
+        console.log('Optimizer:', optimizer);
+    </script>
+</body>
+</html>

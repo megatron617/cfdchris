@@ -12,6 +12,7 @@ import { CONFIG } from './config.js';
 import { GPUProfiler } from './gpu-profiler.js';
 import { PerformanceMonitor } from './performance-monitor.js';
 import { PerformanceDashboard } from './performance-dashboard.js';
+import { PerformanceOptimizer } from './performance-optimizer.js';
 import { initializeInstructionsModal } from './instructions-modal.js';
 
 class FluidApp {
@@ -42,6 +43,9 @@ class FluidApp {
             // Initialize simulation with performance monitor
             this.simulation = new FluidSimulation3D(this.webglContext, this.performanceMonitor);
             
+            // Initialize performance optimizer
+            this.performanceOptimizer = new PerformanceOptimizer(this.simulation, this.performanceMonitor);
+            
             // Initialize 3D camera (orbit mode)
             this.camera = new OrbitController();
             
@@ -61,8 +65,22 @@ class FluidApp {
             // Setup performance dashboard controls
             this.setupPerformanceControls();
             
+            // Setup optimizer controls
+            this.setupOptimizerControls();
+            
             // Update rendering mode badge
             this.updateRenderModeBadge();
+            
+            // Update static grid info display
+            const g = CONFIG.gridSize;
+            const voxels = g.x * g.y * g.z;
+            const voxelLabel = voxels >= 1_000_000
+                ? (voxels / 1_000_000).toFixed(1) + 'M'
+                : (voxels / 1_000).toFixed(0) + 'K';
+            const gridInfoEl = document.getElementById('grid-info');
+            const voxelsInfoEl = document.getElementById('voxels-info');
+            if (gridInfoEl) gridInfoEl.textContent = `${g.x}×${g.y}×${g.z} (3D)`;
+            if (voxelsInfoEl) voxelsInfoEl.textContent = voxelLabel;
             
             console.log('Fluid simulation initialized!');
             console.log('Click and drag to create fluid motion');
@@ -104,6 +122,55 @@ class FluidApp {
         });
     }
 
+    setupOptimizerControls() {
+        // Grid size selector — syncs to the currently running grid (from localStorage/config)
+        // and reloads immediately when changed so config.js picks up the new value
+        const gridSizeSelect = document.getElementById('grid-size-select');
+        if (gridSizeSelect) {
+            // Reflect the grid size that is actually running right now
+            gridSizeSelect.value = String(CONFIG.gridSize.x);
+            
+            gridSizeSelect.addEventListener('change', (e) => {
+                localStorage.setItem('gridSize', e.target.value);
+                location.reload();
+            });
+        }
+        
+        // Quality preset selector
+        const presetSelect = document.getElementById('quality-preset');
+        if (presetSelect) {
+            presetSelect.addEventListener('change', (e) => {
+                const preset = this.performanceOptimizer.applyPreset(e.target.value);
+                console.log(`Quality preset changed to: ${preset.name}`);
+            });
+        }
+        
+        // Auto-optimize toggle
+        const autoOptToggle = document.getElementById('auto-optimize');
+        if (autoOptToggle) {
+            autoOptToggle.addEventListener('change', (e) => {
+                this.performanceOptimizer.setAutoOptimize(e.target.checked);
+            });
+        }
+        
+        // Benchmark button
+        const benchmarkBtn = document.getElementById('benchmark-btn');
+        if (benchmarkBtn) {
+            benchmarkBtn.addEventListener('click', async () => {
+                benchmarkBtn.disabled = true;
+                benchmarkBtn.textContent = 'Benchmarking...';
+                
+                const result = await this.performanceOptimizer.benchmark(5000);
+                
+                benchmarkBtn.disabled = false;
+                benchmarkBtn.textContent = 'Run Benchmark';
+                
+                // Show results
+                alert(`Benchmark Results:\n\nAverage FPS: ${result.avgFPS.toFixed(1)}\nMin FPS: ${result.minFPS.toFixed(1)}\nMax FPS: ${result.maxFPS.toFixed(1)}\n\nRecommended: ${result.recommendation.toUpperCase()}`);
+            });
+        }
+    }
+
     updateRenderModeBadge() {
         const badge = document.getElementById('render-mode-badge');
         if (!badge) return;
@@ -137,6 +204,9 @@ class FluidApp {
         
         // Update camera info display
         this.updateCameraInfo();
+        
+        // Update performance optimizer
+        this.performanceOptimizer.update();
         
         // Step simulation
         this.simulation.step();

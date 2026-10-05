@@ -19,6 +19,40 @@
                 <input type="range" id="force" min="5" max="100" value="30">
             </div>
             
+            <!-- Performance/Quality Controls -->
+            <div class="control-section">
+                <h4>Performance</h4>
+                <div class="control">
+                    <label>Grid Size:</label>
+                    <select id="grid-size-select">
+                        <option value="24">24³ (14K voxels, fastest)</option>
+                        <option value="32">32³ (33K voxels)</option>
+                        <option value="48">48³ (110K voxels)</option>
+                        <option value="64">64³ (262K voxels)</option>
+                        <option value="96">96³ (884K voxels)</option>
+                        <option value="128">128³ (2.1M voxels)</option>
+                    </select>
+                    <small style="color: #888;">Requires page reload</small>
+                </div>
+                <div class="control">
+                    <label>Quality Preset:</label>
+                    <select id="quality-preset">
+                        <option value="potato">Potato (5 iter, fastest)</option>
+                        <option value="low">Low (10 iter)</option>
+                        <option value="medium" selected>Medium (20 iter)</option>
+                        <option value="high">High (30 iter)</option>
+                        <option value="ultra">Ultra (40 iter, slowest)</option>
+                    </select>
+                </div>
+                <div class="control">
+                    <label>
+                        <input type="checkbox" id="auto-optimize">
+                        Auto-optimize for FPS
+                    </label>
+                </div>
+                <button id="benchmark-btn" style="width: 100%; margin-top: 5px;">Run Benchmark</button>
+            </div>
+            
             <!-- 3D Slice Controls -->
             <div class="control-section">
                 <h4>3D Slice View</h4>
@@ -47,8 +81,8 @@
         </div>
         <div id="info">
             <div>FPS: <span id="fps">0</span></div>
-            <div>Grid: 128×128×128 (3D)</div>
-            <div>Voxels: 2.1M</div>
+            <div>Grid: <span id="grid-info">-</span></div>
+            <div>Voxels: <span id="voxels-info">-</span></div>
             <div id="camera-info" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #444;">
                 <div><strong>Camera (Orbit)</strong></div>
                 <div>Azimuth: <span id="cam-azimuth">0.0°</span></div>

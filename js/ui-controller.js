@@ -51,6 +51,11 @@ export class UIController {
                     
                     // Update label
                     this.updateSliceLabel();
+                    
+                    // Re-render immediately when paused so the new axis is visible
+                    if (!this.running) {
+                        this.renderer.render();
+                    }
                 }
             };
         });
@@ -64,6 +69,11 @@ export class UIController {
                 if (this.renderer.setSliceDepth) {
                     this.renderer.setSliceDepth(value);
                     this.updateSliceLabel();
+                    
+                    // Re-render immediately when paused so the new layer is visible
+                    if (!this.running) {
+                        this.renderer.render();
+                    }
                 }
             };
         }
@@ -73,6 +83,10 @@ export class UIController {
         if (clearBtn) {
             clearBtn.onclick = () => {
                 this.simulation.clear();
+                // Re-render when paused so the cleared state is visible
+                if (!this.running && this.renderer) {
+                    this.renderer.render();
+                }
             };
         }
 

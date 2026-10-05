@@ -18,6 +18,9 @@ export class FluidSimulation3D {
         this.pressure = webglContext.createDoubleFBO3D();
         this.divergence = webglContext.createFBO3D();
         
+        // Validate one layer of each FBO once at init (debug check, not per-frame)
+        this.validateFBOs();
+        
         console.log('✓ 3D simulation buffers created');
         
         this.params = {
@@ -51,7 +54,7 @@ export class FluidSimulation3D {
                 u_velocity: gl.getUniformLocation(programs.advect3D, 'u_velocity'),
                 u_source: gl.getUniformLocation(programs.advect3D, 'u_source'),
                 u_dt: gl.getUniformLocation(programs.advect3D, 'u_dt'),
-                u_gridScale: gl.getUniformLocation(programs.advect3D, 'u_gridScale'),
+                u_dissipation: gl.getUniformLocation(programs.advect3D, 'u_dissipation'),
                 u_layer: gl.getUniformLocation(programs.advect3D, 'u_layer')
             },
             jacobi3D: {
@@ -81,6 +84,32 @@ export class FluidSimulation3D {
     }
 
     /**
+     * Validate FBOs once at initialization.
+     * Uses debugCheck=true so checkFramebufferStatus runs here but NEVER in the render loop.
+     */
+    validateFBOs() {
+        const fbos = [
+            { name: 'velocity.fbo1', fbo: this.velocity.fbo1 },
+            { name: 'dye.fbo1',      fbo: this.dye.fbo1 },
+            { name: 'pressure.fbo1', fbo: this.pressure.fbo1 },
+            { name: 'divergence',    fbo: this.divergence }
+        ];
+
+        let allOk = true;
+        for (const { name, fbo } of fbos) {
+            const ok = this.webglContext.attachTextureLayer(fbo.fbo, fbo.tex, 0, true);
+            if (!ok) {
+                console.error(`FBO validation failed for: ${name}`);
+                allOk = false;
+            }
+        }
+
+        if (allOk) {
+            console.log('✓ All 3D FBOs validated (layer-0 check passed)');
+        }
+    }
+
+    /**
      * Render to all layers of a 3D texture
      * This is the core of layer-by-layer rendering
      */
@@ -96,22 +125,25 @@ export class FluidSimulation3D {
             uniformSetup();
         }
         
+        // Cache u_layer location ONCE per call (was: once per layer = z redundant lookups)
+        const u_layer = gl.getUniformLocation(program, 'u_layer');
+        
+        // Set up quad geometry ONCE for all layers (was: repeated inside renderQuad each draw)
+        const posLoc = gl.getAttribLocation(program, 'a_pos');
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.webglContext.quadBuffer);
+        gl.enableVertexAttribArray(posLoc);
+        gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
+        
         // Render each Z-layer
         for (let layer = 0; layer < z; layer++) {
-            // Attach this layer to the framebuffer
-            this.webglContext.attachTextureLayer(
-                outputFBO.fbo,
-                outputFBO.tex,
-                layer
-            );
+            // Attach this layer to the framebuffer (no sync check — validated once at init)
+            this.webglContext.attachTextureLayer(outputFBO.fbo, outputFBO.tex, layer);
             
-            // Set layer uniform (normalized 0.0 to 1.0)
-            const layerUV = layer / (z - 1);
-            const u_layer = gl.getUniformLocation(program, 'u_layer');
-            gl.uniform1f(u_layer, layerUV);
+            // Update only what changes per layer: the Z coordinate
+            gl.uniform1f(u_layer, layer / (z - 1));
             
-            // Render fullscreen quad for this layer
-            this.webglContext.renderQuad(program);
+            // Draw — buffer and attribs already set above
+            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
         }
     }
 
@@ -169,9 +201,9 @@ export class FluidSimulation3D {
             gl.bindTexture(gl.TEXTURE_3D, target.fbo1.tex);
             gl.uniform1i(uniforms.u_source, 1);
             
-            // Set timestep and grid scale
-            gl.uniform1f(uniforms.u_dt, this.params.dt * dissipation);
-            gl.uniform3fv(uniforms.u_gridScale, this.gridScale);
+            // Set timestep and dissipation as separate uniforms
+            gl.uniform1f(uniforms.u_dt, this.params.dt);
+            gl.uniform1f(uniforms.u_dissipation, dissipation);
         };
         
         // Render to all layers
@@ -221,7 +253,8 @@ export class FluidSimulation3D {
         const uniforms = this.uniformCache.jacobi3D;
         const { x, y, z } = this.gridSize;
         
-        // Clear pressure buffers (all layers)
+        // Clear pressure each frame for stability — warm-starting caused oscillation
+        // because accumulated pressure values produced velocity spikes on injection.
         this.clearTexture3D(this.pressure.fbo1);
         this.clearTexture3D(this.pressure.fbo2);
         

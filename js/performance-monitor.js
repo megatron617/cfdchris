@@ -13,8 +13,12 @@ export class PerformanceMonitor {
         this.droppedFrames = 0;
         this.frameStartTime = 0;
         this.lastFrameTime = 0;
-        this.frameTimes = []; // Rolling window of last 60 frames
+        this.frameTimes = []; // Rolling window of last 60 frames (CPU submission time)
         this.maxFrameHistory = 60;
+        
+        // Wall-clock FPS tracking (measures real frame rate, not CPU submission time)
+        this.wallClockFrameTimes = [];
+        this.lastFrameStartTime = 0;
         
         // FPS tracking
         this.fpsHistory = [];
@@ -54,7 +58,21 @@ export class PerformanceMonitor {
     startFrame() {
         if (!this.enabled) return;
         
-        this.frameStartTime = performance.now();
+        const now = performance.now();
+        
+        // Wall-clock interval between frames — this is real FPS, not CPU submission time.
+        // The GPU runs async so measuring start→end gives CPU time only (~1ms),
+        // which would read as ~1000 FPS. Instead track time between consecutive startFrame calls.
+        if (this.lastFrameStartTime > 0) {
+            const wallClockInterval = now - this.lastFrameStartTime;
+            this.wallClockFrameTimes.push(wallClockInterval);
+            if (this.wallClockFrameTimes.length > this.maxFrameHistory) {
+                this.wallClockFrameTimes.shift();
+            }
+        }
+        this.lastFrameStartTime = now;
+        
+        this.frameStartTime = now;
         this.frameCount++;
         this.totalFrames++;
         
@@ -207,9 +225,11 @@ export class PerformanceMonitor {
      * Get current FPS
      */
     getCurrentFPS() {
-        if (this.frameTimes.length < 2) return 0;
-        const avgFrameTime = this.calculateAverage(this.frameTimes);
-        return avgFrameTime > 0 ? 1000 / avgFrameTime : 0;
+        // Use wall-clock intervals between frames (time between startFrame calls).
+        // This reflects real FPS capped by requestAnimationFrame, not CPU submission speed.
+        if (this.wallClockFrameTimes.length < 2) return 0;
+        const avgInterval = this.calculateAverage(this.wallClockFrameTimes);
+        return avgInterval > 0 ? 1000 / avgInterval : 0;
     }
 
     /**

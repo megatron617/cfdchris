@@ -939,3 +939,44 @@ button:hover {
 .axis-btn.active:hover {
     background: #357abd;
 }
+
+
+/* Quality preset select */
+select {
+    padding: 6px 10px;
+    background: #1a1a1a;
+    border: 1px solid #555;
+    border-radius: 4px;
+    color: #fff;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+select:hover {
+    border-color: #4a90e2;
+}
+
+select:focus {
+    outline: none;
+    border-color: #4a90e2;
+}
+
+/* Checkbox styling */
+input[type="checkbox"] {
+    margin-right: 8px;
+    cursor: pointer;
+}
+
+/* Control section headings */
+.control-section {
+    border-left: 2px solid #444;
+    padding-left: 15px;
+}
+
+.control-section h4 {
+    margin: 0 0 10px 0;
+    font-size: 12px;
+    color: #4a90e2;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}

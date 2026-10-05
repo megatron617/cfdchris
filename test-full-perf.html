@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Full Performance Test (with Rendering)</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: monospace;
+            background: #1a1a1a;
+            color: #fff;
+            font-size: 16px;
+        }
+        .container {
+            display: flex;
+            gap: 20px;
+        }
+        canvas {
+            border: 2px solid #444;
+        }
+        .big {
+            font-size: 48px;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+        .fps-good { color: #4f4; }
+        .fps-ok { color: #ff4; }
+        .fps-bad { color: #f44; }
+        .info {
+            background: #2a2a2a;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            min-width: 300px;
+        }
+        .metric {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Full Performance Test (Simulation + Rendering)</h1>
+    
+    <div class="container">
+        <div>
+            <canvas id="displayCanvas" width="512" height="512"></canvas>
+        </div>
+        
+        <div>
+            <div class="big" id="fps-display">Measuring...</div>
+            
+            <div class="info">
+                <h3>Performance</h3>
+                <div class="metric">Frame Count: <span id="frame-count">0</span></div>
+                <div class="metric">Simulation Time: <span id="sim-time">-</span> ms</div>
+                <div class="metric">Render Time: <span id="render-time">-</span> ms</div>
+                <div class="metric">Total Frame Time: <span id="frame-time">-</span> ms</div>
+            </div>
+            
+            <div class="info">
+                <h3>Configuration</h3>
+                <div class="metric">Grid Size: <span id="grid-size">-</span></div>
+                <div class="metric">Iterations: <span id="iterations">-</span></div>
+                <div class="metric">Total Voxels: <span id="voxels">-</span></div>
+                <div class="metric">Render Passes/Frame: <span id="passes">-</span></div>
+            </div>
+            
+            <div class="info">
+                <h3>GPU Info</h3>
+                <div class="metric">Renderer: <span id="gpu-renderer">-</span></div>
+                <div class="metric">Vendor: <span id="gpu-vendor">-</span></div>
+            </div>
+        </div>
+    </div>
+    
+    <script type="module">
+        try {
+            const { WebGLContext } = await import('./js/webgl-utils.js');
+            const { FluidSimulation3D } = await import('./js/simulation3d.js');
+            const { Renderer3D } = await import('./js/renderer3d.js');
+            const { CONFIG } = await import('./js/config.js');
+            
+            console.log('Modules loaded');
+            console.log(`Grid: ${CONFIG.gridSize.x}×${CONFIG.gridSize.y}×${CONFIG.gridSize.z}`);
+            
+            // Setup WebGL canvas (hidden)
+            const webglCanvas = document.createElement('canvas');
+            webglCanvas.width = CONFIG.gridSize.x;
+            webglCanvas.height = CONFIG.gridSize.y;
+            
+            // Setup display canvas (visible)
+            const displayCanvas = document.getElementById('displayCanvas');
+            
+            // Create contexts
+            const webglContext = new WebGLContext(webglCanvas);
+            const gl = webglContext.gl;
+            
+            // Get GPU info
+            const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+            if (debugInfo) {
+                const renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+                const vendor = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL);
+                document.getElementById('gpu-renderer').textContent = renderer;
+                document.getElementById('gpu-vendor').textContent = vendor;
+            }
+            
+            // Create simulation and renderer
+            const simulation = new FluidSimulation3D(webglContext, null);
+            const renderer = new Renderer3D(webglContext, displayCanvas, simulation, null, null);
+            
+            const iterations = simulation.params.iterations;
+            const gridZ = CONFIG.gridSize.z;
+            const voxels = CONFIG.gridSize.x * CONFIG.gridSize.y * CONFIG.gridSize.z;
+            const renderPasses = gridZ * 4 + (gridZ * iterations) + 1;
+            
+            // Update static info
+            document.getElementById('grid-size').textContent = 
+                `${CONFIG.gridSize.x}×${CONFIG.gridSize.y}×${CONFIG.gridSize.z}`;
+            document.getElementById('iterations').textContent = iterations;
+            document.getElementById('voxels').textContent = voxels.toLocaleString();
+            document.getElementById('passes').textContent = renderPasses.toLocaleString();
+            
+            // Add some initial dye for visual feedback
+            simulation.splat3D(simulation.dye, 0.5, 0.5, 0.5, 0.5, 0.2, 0.8);
+            simulation.splat3D(simulation.dye, 0.3, 0.7, 0.5, 0.8, 0.5, 0.2);
+            simulation.splat3D(simulation.velocity, 0.5, 0.5, 0.5, 5, 3, 0);
+            
+            // FPS tracking
+            let frameCount = 0;
+            let lastTime = performance.now();
+            let fps = 0;
+            
+            function animate() {
+                const frameStart = performance.now();
+                
+                // Simulation step
+                const simStart = performance.now();
+                simulation.step();
+                const simEnd = performance.now();
+                const simTime = simEnd - simStart;
+                
+                // Rendering step
+                const renderStart = performance.now();
+                renderer.render();
+                const renderEnd = performance.now();
+                const renderTime = renderEnd - renderStart;
+                
+                const frameEnd = performance.now();
+                const frameTime = frameEnd - frameStart;
+                
+                frameCount++;
+                
+                // Calculate FPS every second
+                if (frameEnd - lastTime >= 1000) {
+                    fps = frameCount;
+                    frameCount = 0;
+                    lastTime = frameEnd;
+                }
+                
+                // Update display
+                document.getElementById('frame-count').textContent = frameCount;
+                document.getElementById('sim-time').textContent = simTime.toFixed(2);
+                document.getElementById('render-time').textContent = renderTime.toFixed(2);
+                document.getElementById('frame-time').textContent = frameTime.toFixed(2);
+                
+                const fpsDisplay = document.getElementById('fps-display');
+                fpsDisplay.textContent = `${fps} FPS`;
+                
+                if (fps >= 30) {
+                    fpsDisplay.className = 'big fps-good';
+                } else if (fps >= 15) {
+                    fpsDisplay.className = 'big fps-ok';
+                } else {
+                    fpsDisplay.className = 'big fps-bad';
+                }
+                
+                requestAnimationFrame(animate);
+            }
+            
+            console.log('Starting full animation loop (simulation + rendering)...');
+            animate();
+            
+        } catch (error) {
+            console.error('ERROR:', error);
+            document.getElementById('fps-display').textContent = 'ERROR';
+            document.getElementById('fps-display').className = 'big fps-bad';
+        }
+    </script>
+</body>
+</html>

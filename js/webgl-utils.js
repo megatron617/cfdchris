@@ -166,9 +166,9 @@ export class WebGLContext {
         const filterMode = this.floatLinear ? gl.LINEAR : gl.NEAREST;
         gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, filterMode);
         gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, filterMode);
-        gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+        gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+        gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_R, gl.REPEAT);
         
         return tex;
     }
@@ -188,7 +188,7 @@ export class WebGLContext {
         return { fbo, tex, width: x, height: y, depth: z };
     }
 
-    attachTextureLayer(fbo, texture, layer) {
+    attachTextureLayer(fbo, texture, layer, debugCheck = false) {
         const gl = this.gl;
         gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
         
@@ -201,11 +201,14 @@ export class WebGLContext {
             layer   // layer index
         );
         
-        // Verify framebuffer is complete
-        const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
-        if (status !== gl.FRAMEBUFFER_COMPLETE) {
-            console.error(`FBO incomplete for layer ${layer}:`, status);
-            return false;
+        // Only validate when debugging - this is a synchronous GPU query
+        // and must NOT be called in the render loop (288 stalls/frame otherwise)
+        if (debugCheck) {
+            const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+            if (status !== gl.FRAMEBUFFER_COMPLETE) {
+                console.error(`FBO incomplete for layer ${layer}:`, status);
+                return false;
+            }
         }
         
         return true;

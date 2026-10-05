@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Performance Test</title>
+    <style>
+        body {
+            margin: 20px;
+            padding: 20px;
+            font-family: monospace;
+            background: #1a1a1a;
+            color: #fff;
+            font-size: 16px;
+        }
+        .big {
+            font-size: 48px;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+        .fps-good { color: #4f4; }
+        .fps-ok { color: #ff4; }
+        .fps-bad { color: #f44; }
+        .info {
+            background: #2a2a2a;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .metric {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Simple Performance Test</h1>
+    
+    <div class="big" id="fps-display">Measuring...</div>
+    
+    <div class="info">
+        <div class="metric">Frame Time (60-frame avg): <span id="frame-time">-</span></div>
+        <div class="metric">Grid Size: <span id="grid-size">-</span></div>
+        <div class="metric">Iterations: <span id="iterations">-</span></div>
+        <div class="metric">Total Voxels: <span id="voxels">-</span></div>
+        <div class="metric">Render Passes/Frame: <span id="passes">-</span></div>
+    </div>
+    
+    <div class="info">
+        <h3>GPU Info:</h3>
+        <div class="metric">Renderer: <span id="gpu-renderer">-</span></div>
+        <div class="metric">Vendor: <span id="gpu-vendor">-</span></div>
+        <div class="metric">WebGL Version: <span id="webgl-version">-</span></div>
+        <div class="metric">Max Texture Size: <span id="max-texture">-</span></div>
+    </div>
+    
+    <div class="info">
+        <h3>Console Output:</h3>
+        <div id="console" style="font-size: 12px; color: #aaa;"></div>
+    </div>
+    
+    <script type="module">
+        const consoleDiv = document.getElementById('console');
+        const originalLog = console.log;
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            consoleDiv.innerHTML += args.join(' ') + '<br>';
+            consoleDiv.scrollTop = consoleDiv.scrollHeight;
+        };
+        
+        console.log('Loading modules...');
+        
+        try {
+            const { WebGLContext } = await import('./js/webgl-utils.js');
+            const { FluidSimulation3D } = await import('./js/simulation3d.js');
+            const { CONFIG } = await import('./js/config.js');
+            
+            console.log('Modules loaded successfully');
+            console.log(`Grid: ${CONFIG.gridSize.x}×${CONFIG.gridSize.y}×${CONFIG.gridSize.z}`);
+            
+            // Setup
+            const canvas = document.createElement('canvas');
+            canvas.width = CONFIG.gridSize.x;
+            canvas.height = CONFIG.gridSize.y;
+            
+            console.log('Creating WebGL context...');
+            const webglContext = new WebGLContext(canvas);
+            const gl = webglContext.gl;
+            
+            // Get GPU info
+            const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+            if (debugInfo) {
+                const renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+                const vendor = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL);
+                console.log('GPU Renderer:', renderer);
+                console.log('GPU Vendor:', vendor);
+                document.getElementById('gpu-renderer').textContent = renderer;
+                document.getElementById('gpu-vendor').textContent = vendor;
+            } else {
+                console.log('GPU info extension not available');
+                document.getElementById('gpu-renderer').textContent = 'Unknown (extension not available)';
+                document.getElementById('gpu-vendor').textContent = 'Unknown';
+            }
+            
+            document.getElementById('webgl-version').textContent = gl.getParameter(gl.VERSION);
+            document.getElementById('max-texture').textContent = gl.getParameter(gl.MAX_TEXTURE_SIZE);
+            
+            console.log('Creating simulation...');
+            const simulation = new FluidSimulation3D(webglContext, null);
+            
+            const iterations = simulation.params.iterations;
+            const gridZ = CONFIG.gridSize.z;
+            const voxels = CONFIG.gridSize.x * CONFIG.gridSize.y * CONFIG.gridSize.z;
+            const renderPasses = gridZ * 4 + (gridZ * iterations) + 1;
+            
+            console.log(`Iterations: ${iterations}`);
+            console.log(`Voxels: ${voxels.toLocaleString()}`);
+            console.log(`Render passes/frame: ${renderPasses.toLocaleString()}`);
+            
+            // Update static info
+            document.getElementById('grid-size').textContent = 
+                `${CONFIG.gridSize.x}×${CONFIG.gridSize.y}×${CONFIG.gridSize.z}`;
+            document.getElementById('iterations').textContent = iterations;
+            document.getElementById('voxels').textContent = voxels.toLocaleString();
+            document.getElementById('passes').textContent = renderPasses.toLocaleString();
+            
+            // FPS and frame time tracking
+            let frameCount = 0;
+            let lastTime = performance.now();
+            let fps = 0;
+            
+            // Rolling average over last 60 frames
+            const frameTimes = [];
+            const ROLLING_WINDOW = 60;
+            
+            function animate() {
+                const startTime = performance.now();
+                
+                // Step simulation
+                simulation.step();
+                
+                const endTime = performance.now();
+                const frameTime = endTime - startTime;
+                
+                // Add to rolling window
+                frameTimes.push(frameTime);
+                if (frameTimes.length > ROLLING_WINDOW) {
+                    frameTimes.shift();
+                }
+                
+                frameCount++;
+                
+                // Update FPS counter once per second
+                if (endTime - lastTime >= 1000) {
+                    fps = frameCount;
+                    frameCount = 0;
+                    lastTime = endTime;
+                }
+                
+                // Compute rolling average and min/max
+                const avg = frameTimes.reduce((a, b) => a + b, 0) / frameTimes.length;
+                const min = Math.min(...frameTimes);
+                const max = Math.max(...frameTimes);
+                
+                // Update display
+                document.getElementById('frame-time').textContent =
+                    `avg ${avg.toFixed(2)} ms   min ${min.toFixed(2)}   max ${max.toFixed(2)}`;
+                
+                const fpsDisplay = document.getElementById('fps-display');
+                fpsDisplay.textContent = `${fps} FPS`;
+                
+                if (fps >= 30) {
+                    fpsDisplay.className = 'big fps-good';
+                } else if (fps >= 15) {
+                    fpsDisplay.className = 'big fps-ok';
+                } else {
+                    fpsDisplay.className = 'big fps-bad';
+                }
+                
+                requestAnimationFrame(animate);
+            }
+            
+            console.log('Starting animation loop...');
+            animate();
+            
+        } catch (error) {
+            console.log('ERROR: ' + error.message);
+            console.log('Stack: ' + error.stack);
+            document.getElementById('fps-display').textContent = 'ERROR - Check Console';
+            document.getElementById('fps-display').className = 'big fps-bad';
+        }
+    </script>
+</body>
+</html>

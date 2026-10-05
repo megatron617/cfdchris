@@ -55,20 +55,21 @@ export const advect3DFragmentShader = `#version 300 es
     
     uniform sampler3D u_velocity;   // 3D velocity field (vec3)
     uniform sampler3D u_source;     // Field to advect
-    uniform float u_dt;             // Time step × dissipation
-    uniform vec3 u_gridScale;       // Reciprocal of grid size for proper scaling
+    uniform float u_dt;             // Time step
+    uniform float u_dissipation;    // Multiplied on output — fades value regardless of velocity
     
     void main() {
         // Sample velocity at current position
         vec3 vel = texture(u_velocity, v_uvw).xyz;
         
-        // Back-trace along velocity field
-        // Scale velocity by grid dimensions for correct advection
-        vec3 pos = v_uvw - u_dt * vel * u_gridScale;
+        // Back-trace along velocity field.
+        // Velocity is in texture-coordinate units (0-1 range).
+        vec3 pos = v_uvw - u_dt * vel;
         
-        // Sample source field at back-traced position
-        // Linear interpolation is automatic with LINEAR texture filtering
-        outColor = texture(u_source, pos);
+        // Sample source field and apply dissipation as a direct multiplier.
+        // This fades dye/velocity even in zero-velocity regions, which the
+        // old approach (baking dissipation into dt) could not do.
+        outColor = texture(u_source, pos) * u_dissipation;
     }`;
 
 /**
