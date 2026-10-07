@@ -4,6 +4,7 @@
     <title>GPU Fluid Dynamics</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="data:,">
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
@@ -80,25 +81,31 @@
             <canvas id="displayCanvas" width="512" height="512"></canvas>
         </div>
         <div id="info">
-            <div>FPS: <span id="fps">0</span></div>
-            <div>Grid: <span id="grid-info">-</span></div>
-            <div>Voxels: <span id="voxels-info">-</span></div>
-            <div id="camera-info" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #444;">
-                <div><strong>Camera (Orbit)</strong></div>
-                <div>Azimuth: <span id="cam-azimuth">0.0°</span></div>
-                <div>Elevation: <span id="cam-elevation">0.0°</span></div>
-                <div>Distance: <span id="cam-distance">2.50</span></div>
+            <div id="info-header">
+                <span>Info</span>
+                <button id="info-minimize" title="Minimize">−</button>
             </div>
-            <div id="raycast-info" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #444;">
-                <div><strong>Raycast (3D)</strong></div>
-                <div>Hit: <span id="ray-hit" style="color: #888;">-</span></div>
-                <div>Point: <span id="ray-point" style="color: #888;">-</span></div>
-            </div>
-            <div style="margin-top: 10px; font-size: 11px; color: #888;">
-                <div>LEFT: Paint fluid</div>
-                <div>RIGHT: Rotate camera</div>
-                <div>WHEEL: Zoom</div>
-                <div>R: Reset camera</div>
+            <div id="info-body">
+                <div>FPS: <span id="fps">0</span></div>
+                <div>Grid: <span id="grid-info">-</span></div>
+                <div>Voxels: <span id="voxels-info">-</span></div>
+                <div id="camera-info" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #444;">
+                    <div><strong>Camera (Orbit)</strong></div>
+                    <div>Azimuth: <span id="cam-azimuth">0.0°</span></div>
+                    <div>Elevation: <span id="cam-elevation">0.0°</span></div>
+                    <div>Distance: <span id="cam-distance">2.50</span></div>
+                </div>
+                <div id="raycast-info" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #444;">
+                    <div><strong>Raycast (3D)</strong></div>
+                    <div>Hit: <span id="ray-hit" style="color: #888;">-</span></div>
+                    <div>Point: <span id="ray-point" style="color: #888;">-</span></div>
+                </div>
+                <div style="margin-top: 10px; font-size: 11px; color: #888;">
+                    <div>LEFT: Paint fluid</div>
+                    <div>RIGHT: Rotate camera</div>
+                    <div>WHEEL: Zoom</div>
+                    <div>R: Reset camera</div>
+                </div>
             </div>
         </div>
     </div>

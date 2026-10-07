@@ -276,23 +276,6 @@ export const slice3DFragmentShader = `#version 300 es
     }`;
 
 /**
- * Simple display shader (for backwards compatibility with 2D rendering)
- * This will be used temporarily until we fully switch to slice rendering
- */
-export const displayFragmentShader = `#version 300 es
-    precision highp float;
-    
-    in vec2 v_uv;
-    out vec4 outColor;
-    
-    uniform sampler2D u_field;
-    
-    void main() {
-        vec4 texColor = texture(u_field, v_uv);
-        outColor = vec4(texColor.rgb * ${CONFIG.colorBrightness.toFixed(1)}, 1.0);
-    }`;
-
-/**
  * Ray marching shader (for Phase 2)
  * Volumetric rendering through the 3D texture
  * This is a placeholder - full implementation comes in Task 8

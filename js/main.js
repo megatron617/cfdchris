@@ -68,6 +68,9 @@ class FluidApp {
             // Setup optimizer controls
             this.setupOptimizerControls();
             
+            // Setup info panel (minimize + drag)
+            this.setupInfoPanel();
+            
             // Update rendering mode badge
             this.updateRenderModeBadge();
             
@@ -191,6 +194,46 @@ class FluidApp {
             tooltipText = 'Unable to detect rendering mode';
         }
         badge.title = tooltipText;
+    }
+
+    setupInfoPanel() {
+        const panel = document.getElementById('info');
+        const header = document.getElementById('info-header');
+        const minimizeBtn = document.getElementById('info-minimize');
+        if (!panel || !header || !minimizeBtn) return;
+
+        // Minimize / expand toggle
+        minimizeBtn.addEventListener('click', () => {
+            const minimized = panel.classList.toggle('minimized');
+            minimizeBtn.textContent = minimized ? '+' : '−';
+        });
+
+        // Drag to reposition
+        let isDragging = false;
+        let dragStartX, dragStartY, startLeft, startTop;
+
+        header.addEventListener('mousedown', (e) => {
+            if (e.target === minimizeBtn) return;  // button click, not a drag
+            isDragging = true;
+            dragStartX = e.clientX;
+            dragStartY = e.clientY;
+            const rect = panel.getBoundingClientRect();
+            startLeft = rect.left;
+            startTop = rect.top;
+            // Switch to fixed positioning so it can move freely on screen
+            panel.style.position = 'fixed';
+            panel.style.left = startLeft + 'px';
+            panel.style.top = startTop + 'px';
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            panel.style.left = (startLeft + e.clientX - dragStartX) + 'px';
+            panel.style.top  = (startTop  + e.clientY - dragStartY) + 'px';
+        });
+
+        document.addEventListener('mouseup', () => { isDragging = false; });
     }
 
     animate() {

@@ -90,7 +90,6 @@ export class WebGLContext {
             
             // Rendering programs
             slice3D: this.createProgram(Shaders.vertexShader, Shaders.slice3DFragmentShader),
-            display: this.createProgram(Shaders.vertexShader, Shaders.displayFragmentShader),
             
             // Future: Ray marching (Phase 2)
             // rayMarch3D: this.createProgram(Shaders.vertexShader, Shaders.rayMarch3DFragmentShader),

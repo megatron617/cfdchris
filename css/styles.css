@@ -980,3 +980,50 @@ input[type="checkbox"] {
     text-transform: uppercase;
     letter-spacing: 1px;
 }
+
+/* Info panel: drag handle header and minimize button */
+#info-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #444;
+    cursor: grab;
+    user-select: none;
+}
+
+#info-header:active {
+    cursor: grabbing;
+}
+
+#info-header > span {
+    font-weight: bold;
+    font-size: 11px;
+    color: #aaa;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+#info-minimize {
+    background: none;
+    border: none;
+    color: #aaa;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 0 4px;
+    line-height: 1;
+}
+
+#info-minimize:hover {
+    color: #fff;
+}
+
+/* Minimized state: hide body, shrink panel */
+#info.minimized #info-body {
+    display: none;
+}
+
+#info.minimized {
+    padding-bottom: 6px;
+}

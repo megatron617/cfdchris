@@ -153,6 +153,7 @@ export class InputHandler {
         const x = this.mouseX;
         const y = this.mouseY;
         const z = this.renderer?.sliceDepth ?? 0.5;
+        console.log(`sliceDepth: ${z}`);
         
         const dz = 0.0;  // No Z-velocity for now
         
