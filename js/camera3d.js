@@ -145,7 +145,7 @@ export class OrbitController extends Camera3D {
      */
     rotate(deltaX, deltaY) {
         this.azimuth -= deltaX * this.rotateSensitivity;
-        this.elevation += deltaY * this.rotateSensitivity;
+        this.elevation -= deltaY * this.rotateSensitivity;
         
         // Clamp elevation to prevent flipping
         this.elevation = Math.max(this.minElevation, Math.min(this.maxElevation, this.elevation));
@@ -181,6 +181,7 @@ export class OrbitController extends Camera3D {
      */
     getInfo() {
         return {
+            type: 'orbit',
             position: this.position.map(v => v.toFixed(2)),
             target: this.target.map(v => v.toFixed(2)),
             azimuth: (this.azimuth * 180 / Math.PI).toFixed(1) + '°',
@@ -192,16 +193,134 @@ export class OrbitController extends Camera3D {
 
 /**
  * Free-Flight Camera Controller (FPS-style)
- * For Task 10 - stub for now
+ * WASD + QE movement, mouse-look via yaw/pitch.
  */
 export class FreeFlightController extends Camera3D {
     constructor() {
         super();
-        console.log('FreeFlightController created (Task 10 - not yet implemented)');
+        // Start just outside the front face of the unit cube, centred
+        this.position = [0.5, 0.5, -0.5];
+        this.yaw   = 0;    // horizontal rotation (radians)
+        this.pitch = 0;    // vertical   rotation (radians), clamped ±89°
+        this.speed = 0.005; // world units per millisecond
+
+        // Mouse-look sensitivity (radians per pixel delta)
+        this.mouseSensitivity = 0.003;
     }
 
-    // TODO: Task 10 implementation
-    // - WASD movement
-    // - Mouse look
-    // - Q/E up/down
+    /** World-space direction the camera is looking. */
+    getForward() {
+        const cp = Math.cos(this.pitch), sp = Math.sin(this.pitch);
+        const cy = Math.cos(this.yaw),   sy = Math.sin(this.yaw);
+        return [cp * sy, sp, cp * cy];
+    }
+
+    /** World-space right vector (independent of pitch — always horizontal). */
+    getRight() {
+        // right = cross(worldUp, forward_horizontal)
+        return [Math.cos(this.yaw), 0, -Math.sin(this.yaw)];
+    }
+
+    getViewMatrix() {
+        const fwd    = this.getForward();
+        const target = [
+            this.position[0] + fwd[0],
+            this.position[1] + fwd[1],
+            this.position[2] + fwd[2]
+        ];
+        return this.lookAt(this.position, target, this.up);
+    }
+
+    getProjectionMatrix() {
+        return this.perspective(this.fov, this.aspect, this.near, this.far);
+    }
+
+    /**
+     * Per-frame movement update.
+     * @param {number} dt   Delta time in milliseconds
+     * @param {object} keys Key-state map from InputHandler
+     */
+    update(dt, keys) {
+        let speed = this.speed;
+        if (keys['Shift'])   speed *= 2.0;
+        if (keys['Control']) speed *= 0.25;
+
+        const fwd   = this.getForward();
+        const right = this.getRight();
+        const move  = [0, 0, 0];
+
+        if (keys['w'] || keys['W']) { move[0] += fwd[0]; move[1] += fwd[1]; move[2] += fwd[2]; }
+        if (keys['s'] || keys['S']) { move[0] -= fwd[0]; move[1] -= fwd[1]; move[2] -= fwd[2]; }
+        if (keys['a'] || keys['A']) { move[0] -= right[0]; move[2] -= right[2]; }
+        if (keys['d'] || keys['D']) { move[0] += right[0]; move[2] += right[2]; }
+        if (keys['q'] || keys['Q']) move[1] += 1;
+        if (keys['e'] || keys['E']) move[1] -= 1;
+
+        const len = Math.sqrt(move[0]*move[0] + move[1]*move[1] + move[2]*move[2]);
+        if (len > 0) {
+            const s = speed * dt / len;
+            this.position[0] += move[0] * s;
+            this.position[1] += move[1] * s;
+            this.position[2] += move[2] * s;
+        }
+    }
+
+    /**
+     * Mouse look — called on right-click drag.
+     * @param {number} dx  Pixel delta X (right = positive)
+     * @param {number} dy  Pixel delta Y (up = positive)
+     */
+    onMouseMove(dx, dy) {
+        this.yaw   += dx * this.mouseSensitivity;
+        this.pitch += dy * this.mouseSensitivity;   // positive dy = dragging down = looks up
+        const limit = 89 * Math.PI / 180;
+        this.pitch = Math.max(-limit, Math.min(limit, this.pitch));
+    }
+
+    /**
+     * Copy position and look-direction from an OrbitController so the view
+     * doesn't jump on switch.
+     * @param {OrbitController} orbit
+     */
+    fromOrbit(orbit) {
+        this.position = [...orbit.position];
+        const dx = orbit.target[0] - orbit.position[0];
+        const dy = orbit.target[1] - orbit.position[1];
+        const dz = orbit.target[2] - orbit.position[2];
+        const len = Math.sqrt(dx*dx + dy*dy + dz*dz);
+        if (len > 0) {
+            this.yaw   = Math.atan2(dx / len, dz / len);
+            this.pitch = Math.asin(Math.max(-1, Math.min(1, dy / len)));
+        }
+    }
+
+    /**
+     * Returns a world-space point one unit ahead along the look-direction.
+     * Used to seed the orbit camera's target when switching back.
+     */
+    toOrbitTarget() {
+        const fwd = this.getForward();
+        return [
+            this.position[0] + fwd[0],
+            this.position[1] + fwd[1],
+            this.position[2] + fwd[2]
+        ];
+    }
+
+    reset() {
+        this.position = [0.5, 0.5, -0.5];
+        this.yaw   = 0;
+        this.pitch = 0;
+    }
+
+    getInfo() {
+        return {
+            type: 'freefly',
+            x:     this.position[0].toFixed(2),
+            y:     this.position[1].toFixed(2),
+            z:     this.position[2].toFixed(2),
+            yaw:   (this.yaw   * 180 / Math.PI).toFixed(1) + '°',
+            pitch: (this.pitch * 180 / Math.PI).toFixed(1) + '°'
+        };
+    }
 }

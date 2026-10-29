@@ -2,6 +2,8 @@
  * Performance Monitor - Metrics collection and timing
  */
 
+import { CONFIG } from './config.js';
+
 export class PerformanceMonitor {
     constructor(gpuProfiler) {
         this.gpuProfiler = gpuProfiler;
@@ -50,6 +52,16 @@ export class PerformanceMonitor {
         
         // Target frame time (for 60 FPS)
         this.targetFrameTime = 1000 / 60; // ~16.67ms
+
+        // Canvas reference (set from main.js for render-metric calculations)
+        this.canvasWidth  = 512;
+        this.canvasHeight = 512;
+    }
+
+    /** Set display canvas dimensions for per-frame step-count calculations. */
+    setCanvasSize(width, height) {
+        this.canvasWidth  = width;
+        this.canvasHeight = height;
     }
 
     /**
@@ -274,6 +286,19 @@ export class PerformanceMonitor {
             ? this.iterationHistory.reduce((sum, item) => 
                 sum + (item.target > 0 ? (item.actual / item.target) * 100 : 100), 0) / this.iterationHistory.length
             : 100;
+
+        // Render / voxel metrics
+        const { x, y, z } = CONFIG.gridSize;
+        const voxelCount      = x * y * z;
+        const avgWallMs       = this.calculateAverage(this.wallClockFrameTimes);
+        const voxelThroughput = avgWallMs > 0
+            ? ((voxelCount / avgWallMs) * 1000 / 1_000_000).toFixed(2)
+            : '0.00';
+
+        const isRayMarch = CONFIG.renderMode === 'raymarch';
+        const rayMarchStepsPerFrame = isRayMarch
+            ? ((CONFIG.rayMarchSteps * this.canvasWidth * this.canvasHeight) / 1_000_000).toFixed(2)
+            : '0.00';
         
         const metrics = {
             frame: {
@@ -303,6 +328,13 @@ export class PerformanceMonitor {
                 actualIterations: this.actualIterations,
                 avgCompletion: avgIterationCompletion.toFixed(1),
                 iterationsSampled: this.iterationHistory.length
+            },
+            render: {
+                mode:                CONFIG.renderMode,
+                rayMarchSteps:       CONFIG.rayMarchSteps,
+                stepsPerFrame:       rayMarchStepsPerFrame,
+                voxelThroughput,
+                active:              isRayMarch
             },
             gpu: {
                 timerAvailable: this.gpuProfiler.isTimerAvailable(),

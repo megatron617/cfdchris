@@ -1027,3 +1027,167 @@ input[type="checkbox"] {
 #info.minimized {
     padding-bottom: 6px;
 }
+
+
+/* ── Simulation mode badge (SLICE / VOLUMETRIC) — Task 12.3 ─────────────── */
+.mode-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+    vertical-align: middle;
+}
+
+.mode-badge.mode-slice {
+    background: #2563eb;
+    color: #fff;
+}
+
+.mode-badge.mode-volumetric {
+    background: #7c3aed;
+    color: #fff;
+}
+
+/* ── Camera mode badge (ORBIT / FREE-FLIGHT) — Task 10.6 ───────────────── */
+.camera-mode-badge {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 8px;
+    font-size: 10px;
+    font-weight: bold;
+    letter-spacing: 0.4px;
+}
+
+.camera-mode-badge.orbit {
+    background: #0f766e;
+    color: #fff;
+}
+
+.camera-mode-badge.freefly {
+    background: #b45309;
+    color: #fff;
+}
+
+/* ── Ray march controls section — Task 12.4 ────────────────────────────── */
+.ray-controls {
+    border-left-color: #7c3aed;
+}
+
+.ray-controls h4 {
+    color: #a78bfa;
+}
+
+/* ── Keyboard shortcut overlay — Task 12.4 ─────────────────────────────── */
+.shortcut-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 3000;
+    backdrop-filter: blur(2px);
+}
+
+.shortcut-overlay.hidden {
+    display: none;
+}
+
+.shortcut-card {
+    background: #1e1e2e;
+    border: 1px solid #4a90e2;
+    border-radius: 10px;
+    padding: 0;
+    min-width: 480px;
+    max-width: 600px;
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+}
+
+.shortcut-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    background: #2a2a3e;
+    border-bottom: 1px solid #3a3a5e;
+    border-radius: 10px 10px 0 0;
+}
+
+.shortcut-card-header h2 {
+    margin: 0;
+    font-size: 18px;
+    color: #4a90e2;
+}
+
+.shortcut-close {
+    background: none;
+    border: none;
+    color: #aaa;
+    font-size: 28px;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    width: 36px;
+    height: 36px;
+}
+
+.shortcut-close:hover {
+    color: #fff;
+}
+
+/* ── Shortcut table — Task 12.4 ────────────────────────────────────────── */
+.shortcut-table {
+    width: 100%;
+    border-collapse: collapse;
+    padding: 12px 0;
+}
+
+.shortcut-table thead th {
+    padding: 10px 20px;
+    text-align: left;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: #888;
+    border-bottom: 1px solid #3a3a5e;
+}
+
+.shortcut-table tbody tr:nth-child(even) {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.shortcut-table tbody tr:hover {
+    background: rgba(74, 144, 226, 0.08);
+}
+
+.shortcut-key {
+    padding: 8px 20px;
+    width: 45%;
+}
+
+.shortcut-desc {
+    padding: 8px 20px 8px 0;
+    color: #ccc;
+    font-size: 13px;
+}
+
+kbd {
+    display: inline-block;
+    background: #2a2a3e;
+    border: 1px solid #555;
+    border-radius: 4px;
+    padding: 2px 7px;
+    font-family: 'Consolas', monospace;
+    font-size: 12px;
+    color: #e0e0e0;
+    box-shadow: 0 1px 0 #333;
+}
+
+/* Scrollbar for shortcut card */
+.shortcut-card::-webkit-scrollbar { width: 6px; }
+.shortcut-card::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
+.shortcut-card::-webkit-scrollbar-thumb { background: #4a90e2; border-radius: 3px; }

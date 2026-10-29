@@ -276,53 +276,86 @@ export const slice3DFragmentShader = `#version 300 es
     }`;
 
 /**
- * Ray marching shader (for Phase 2)
- * Volumetric rendering through the 3D texture
- * This is a placeholder - full implementation comes in Task 8
+ * Ray marching shader — full volumetric renderer
+ * Front-to-back alpha compositing through the dye 3D texture.
+ * Transfer function maps scalar magnitude → RGBA via a 256×1 sampler2D.
  */
 export const rayMarch3DFragmentShader = `#version 300 es
     precision highp float;
     precision highp sampler3D;
-    
+    precision highp sampler2D;
+
     in vec2 v_uv;
     out vec4 outColor;
-    
-    uniform sampler3D u_volume;
-    uniform mat4 u_invViewProj;     // Inverse view-projection matrix
-    uniform vec3 u_cameraPos;       // Camera position
-    uniform float u_stepSize;       // Ray march step size
-    uniform int u_maxSteps;         // Maximum samples per ray
-    
-    // Ray-box intersection
-    // Returns entry and exit t values, or negative if no intersection
-    vec2 rayBoxIntersect(vec3 rayOrigin, vec3 rayDir) {
-        vec3 boxMin = vec3(0.0);
-        vec3 boxMax = vec3(1.0);
-        
-        vec3 invDir = 1.0 / rayDir;
-        vec3 tMin = (boxMin - rayOrigin) * invDir;
-        vec3 tMax = (boxMax - rayOrigin) * invDir;
-        
-        vec3 t1 = min(tMin, tMax);
-        vec3 t2 = max(tMin, tMax);
-        
-        float tNear = max(max(t1.x, t1.y), t1.z);
-        float tFar = min(min(t2.x, t2.y), t2.z);
-        
-        return vec2(tNear, tFar);
+
+    uniform sampler3D u_dye;          // 3-D dye field (RGBA32F)
+    uniform sampler2D u_transfer;     // Transfer function LUT — 256×1 RGBA32F
+    uniform mat4 u_invViewProj;       // Inverse (P * V) for ray reconstruction
+    uniform vec3 u_cameraPos;         // World-space camera position
+    uniform float u_stepCount;        // March steps (64 / 128 / 256)
+    uniform float u_opacityScale;     // Opacity multiplier
+    uniform float u_densityScale;     // Brightness of dye → scalar mapping
+
+    // Slab method ray–box intersection against unit cube [0,0,0]→[1,1,1].
+    // Returns (tNear, tFar); tNear > tFar means no intersection.
+    vec2 rayBoxIntersect(vec3 ro, vec3 rd) {
+        vec3 inv = 1.0 / rd;
+        vec3 t0  = (vec3(0.0) - ro) * inv;
+        vec3 t1  = (vec3(1.0) - ro) * inv;
+        vec3 tMn = min(t0, t1);
+        vec3 tMx = max(t0, t1);
+        float tN = max(max(tMn.x, tMn.y), tMn.z);
+        float tF = min(min(tMx.x, tMx.y), tMx.z);
+        return vec2(tN, tF);
     }
-    
+
     void main() {
-        // TODO: Full implementation in Task 8
-        // For now, just output a placeholder color
-        outColor = vec4(0.1, 0.1, 0.2, 1.0);
-        
-        /* FUTURE IMPLEMENTATION:
-        // Compute ray direction from camera through pixel
-        // Ray-box intersection to find entry/exit points
-        // March through volume accumulating color/opacity
-        // Front-to-back or back-to-front compositing
-        */
+        // Reconstruct world-space ray via inverse view-projection.
+        // v_uv ∈ [0,1] → NDC ∈ [-1,1].
+        vec2 ndc = v_uv * 2.0 - 1.0;
+
+        vec4 near4 = u_invViewProj * vec4(ndc, -1.0, 1.0);
+        vec4 far4  = u_invViewProj * vec4(ndc,  1.0, 1.0);
+        near4 /= near4.w;
+        far4  /= far4.w;
+
+        vec3 rayDir    = normalize(far4.xyz - near4.xyz);
+        vec3 rayOrigin = u_cameraPos;
+
+        // Intersect with the unit volume cube.
+        vec2 tr = rayBoxIntersect(rayOrigin, rayDir);
+        if (tr.x > tr.y || tr.y < 0.0) {
+            outColor = vec4(0.0);
+            return;
+        }
+
+        float tStart   = max(tr.x, 0.0);
+        float tEnd     = tr.y;
+        float stepSize = (tEnd - tStart) / u_stepCount;
+
+        // Front-to-back alpha compositing.
+        vec3  accColor = vec3(0.0);
+        float accAlpha = 0.0;
+
+        for (float i = 0.0; i < u_stepCount; i += 1.0) {
+            if (accAlpha > 0.95) break;  // Early exit — opaque enough
+
+            vec3 pos = rayOrigin + (tStart + (i + 0.5) * stepSize) * rayDir;
+
+            // Sample dye field; scalar = colour magnitude amplified by density scale.
+            vec4  dye    = texture(u_dye, pos);
+            float scalar = clamp(length(dye.rgb) * u_densityScale, 0.0, 1.0);
+
+            // Transfer function lookup (256×1 texture, sample at vertical centre).
+            vec4  tf    = texture(u_transfer, vec2(scalar, 0.5));
+            float alpha = clamp(tf.a * stepSize * u_opacityScale, 0.0, 1.0);
+
+            // Accumulate colour and opacity.
+            accColor += (1.0 - accAlpha) * alpha * tf.rgb;
+            accAlpha += (1.0 - accAlpha) * alpha;
+        }
+
+        outColor = vec4(accColor, accAlpha);
     }`;
 
 // ============================================================================

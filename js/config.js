@@ -44,7 +44,7 @@ export const CONFIG = {
     colorBrightness: 3.0,
     
     // 3D-specific rendering settings
-    renderMode: 'slice',  // 'slice' or 'raymarch'
+    renderMode: 'raymarch',  // 'slice' or 'raymarch'
     sliceAxis: 'z',       // 'x', 'y', or 'z'
     sliceDepth: 0.5,      // 0.0 to 1.0
     
@@ -53,9 +53,11 @@ export const CONFIG = {
     cameraDistance: 2.5,
     cameraFOV: 60,
     
-    // Ray marching settings (for future use)
-    rayMarchSteps: 100,
-    rayMarchStepSize: 0.01
+    // Ray marching settings
+    rayMarchSteps: 128,   // Step count for volumetric rendering (64/128/256)
+    opacityScale: 20.0,   // Opacity multiplier — raised from 1.0; at 128 steps each step
+                          // contributes ~0.0078×tf.a×scale, so ≈1.0 is nearly invisible
+    densityScale: 3.0,    // Amplifies dye.rgb magnitude before TF lookup (matches slice's 3× brightness)
 };
 
 // Performance presets for different hardware

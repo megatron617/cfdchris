@@ -199,10 +199,31 @@ export class PerformanceDashboard {
                     </div>
                 </div>
 
+                <!-- 3D Render Section -->
+                <div class="dashboard-section">
+                    <div class="section-header" data-section="render3d">
+                        <span class="toggle-icon">▼</span>
+                        <span>3D Render</span>
+                    </div>
+                    <div class="section-content" id="render3d-content">
+                        <div class="info-row">
+                            <span class="label">Render Mode:</span>
+                            <span class="value" id="r3d-mode">-</span>
+                        </div>
+                        <div class="info-row" id="r3d-steps-row">
+                            <span class="label">Steps / Frame:</span>
+                            <span class="value" id="r3d-steps">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Voxel Throughput:</span>
+                            <span class="value" id="r3d-voxels">-</span>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Memory Section -->
                 <div class="dashboard-section">
-                    <div class="section-header" data-section="memory">
-                        <span class="toggle-icon">▼</span>
+                    <div class="section-header" data-section="memory">                        <span class="toggle-icon">▼</span>
                         <span>Memory</span>
                     </div>
                     <div class="section-content" id="memory-content">
@@ -311,32 +332,6 @@ export class PerformanceDashboard {
         if (modal) {
             modal.classList.remove('hidden');
         }
-    }
-
-    update(metrics) {
-        if (!this.visible) return;
-        
-        // Throttle updates
-        const now = performance.now();
-        if (now - this.lastUpdate < this.updateThrottle) {
-            return;
-        }
-        this.lastUpdate = now;
-        
-        // Update system info (only needs to be done once, but safe to repeat)
-        this.updateSystemInfo();
-        
-        // Update frame metrics
-        this.updateFrameMetrics(metrics);
-        
-        // Update quality metrics
-        this.updateQualityMetrics(metrics);
-        
-        // Update timing metrics
-        this.updateTimingMetrics(metrics);
-        
-        // Update memory info
-        this.updateMemoryInfo();
     }
 
     updateSystemInfo() {
@@ -804,8 +799,32 @@ export class PerformanceDashboard {
         
         // Update timing metrics
         this.updateTimingMetrics(metrics);
+
+        // Update 3D render metrics
+        this.updateRenderMetrics(metrics);
         
         // Update memory info
         this.updateMemoryInfo();
+    }
+
+    updateRenderMetrics(metrics) {
+        if (!metrics.render) return;
+        const r = metrics.render;
+
+        const modeEl = document.getElementById('r3d-mode');
+        if (modeEl) {
+            modeEl.textContent  = r.mode === 'raymarch' ? 'VOLUMETRIC' : 'SLICE';
+            modeEl.className    = 'value ' + (r.mode === 'raymarch' ? 'status-good' : '');
+        }
+
+        const stepsRow = document.getElementById('r3d-steps-row');
+        const stepsEl  = document.getElementById('r3d-steps');
+        if (stepsRow && stepsEl) {
+            stepsRow.style.display = r.active ? '' : 'none';
+            stepsEl.textContent    = r.active ? `${r.rayMarchSteps} (${r.stepsPerFrame} M/frame)` : '-';
+        }
+
+        const voxEl = document.getElementById('r3d-voxels');
+        if (voxEl) voxEl.textContent = r.voxelThroughput + ' Mvox/s';
     }
 }

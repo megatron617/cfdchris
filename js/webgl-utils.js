@@ -89,10 +89,8 @@ export class WebGLContext {
             splat3D: this.createProgram(Shaders.vertexShader3D, Shaders.splat3DFragmentShader),
             
             // Rendering programs
-            slice3D: this.createProgram(Shaders.vertexShader, Shaders.slice3DFragmentShader),
-            
-            // Future: Ray marching (Phase 2)
-            // rayMarch3D: this.createProgram(Shaders.vertexShader, Shaders.rayMarch3DFragmentShader),
+            slice3D:    this.createProgram(Shaders.vertexShader, Shaders.slice3DFragmentShader),
+            rayMarch3D: this.createProgram(Shaders.vertexShader, Shaders.rayMarch3DFragmentShader),
         };
         
         // Verify all programs compiled successfully
@@ -165,9 +163,13 @@ export class WebGLContext {
         const filterMode = this.floatLinear ? gl.LINEAR : gl.NEAREST;
         gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, filterMode);
         gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, filterMode);
-        gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_S, gl.REPEAT);
-        gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_T, gl.REPEAT);
-        gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_R, gl.REPEAT);
+        // CLAMP_TO_EDGE on all axes: advection back-traces that go out of bounds
+        // clamp to the nearest face value (solid-wall boundary condition).
+        // REPEAT would wrap dye from one face to the opposite face, causing
+        // the axis-aligned stripe artifacts visible in the volumetric view.
+        gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE);
         
         return tex;
     }

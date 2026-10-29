@@ -9,12 +9,17 @@ export class Raycaster3D {
     }
 
     /**
-     * Cast a ray from screen coordinates into 3D space
+     * Cast a ray from screen coordinates into 3D space.
      * @param {number} screenX - Normalized screen X (0-1)
      * @param {number} screenY - Normalized screen Y (0-1)
+     * @param {Camera3D} [camera] - Camera to use; falls back to this.camera if omitted.
+     *   Passing the live camera as a parameter makes each call stateless so callers
+     *   never need to update a stored reference after a camera switch.
      * @returns {Object} { hit: boolean, point: [x,y,z], distance: number }
      */
-    castRay(screenX, screenY) {
+    castRay(screenX, screenY, camera) {
+        const cam = camera ?? this.camera;
+
         // Convert screen coordinates to NDC (Normalized Device Coordinates)
         // Screen: (0,0) = bottom-left, (1,1) = top-right
         // NDC: (-1,-1) = bottom-left, (1,1) = top-right
@@ -22,8 +27,8 @@ export class Raycaster3D {
         const ndcY = screenY * 2.0 - 1.0;
 
         // Get camera matrices
-        const viewMatrix = this.camera.getViewMatrix();
-        const projMatrix = this.camera.getProjectionMatrix();
+        const viewMatrix = cam.getViewMatrix();
+        const projMatrix = cam.getProjectionMatrix();
 
         // Compute inverse view-projection matrix
         const viewProjMatrix = this.multiplyMatrices(projMatrix, viewMatrix);

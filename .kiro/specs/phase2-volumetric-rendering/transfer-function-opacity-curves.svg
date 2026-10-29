@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 580 275">
+  <defs>
+    <linearGradient id="heat-grad" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0%"   stop-color="#000000"/>
+      <stop offset="33%"  stop-color="#ff2200"/>
+      <stop offset="67%"  stop-color="#ffee00"/>
+      <stop offset="100%" stop-color="#ffffff"/>
+    </linearGradient>
+    <linearGradient id="density-grad" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0%"   stop-color="#111111"/>
+      <stop offset="100%" stop-color="#ffffff"/>
+    </linearGradient>
+    <linearGradient id="cool-grad" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0%"   stop-color="#000000"/>
+      <stop offset="33%"  stop-color="#0044ff"/>
+      <stop offset="67%"  stop-color="#00eeff"/>
+      <stop offset="100%" stop-color="#ffffff"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="580" height="275" fill="#0f0f1a"/>
+
+  <!-- Title -->
+  <text x="290" y="20" text-anchor="middle" fill="#cccccc" font-size="12" font-family="monospace" font-weight="bold">Transfer Function — Opacity Curves</text>
+  <text x="290" y="33" text-anchor="middle" fill="#555577" font-size="9"  font-family="monospace">x = dye density scalar (0–1)   y = output opacity (0–1)</text>
+
+  <!-- ===== PANEL 1: HEAT ===== -->
+  <rect x="30" y="42" width="158" height="168" rx="4" fill="#14142a"/>
+  <!-- gridlines -->
+  <line x1="42" y1="76"  x2="178" y2="76"  stroke="#2a2a44" stroke-width="1" stroke-dasharray="3,2"/>
+  <line x1="42" y1="114" x2="178" y2="114" stroke="#2a2a44" stroke-width="1" stroke-dasharray="3,2"/>
+  <line x1="42" y1="152" x2="178" y2="152" stroke="#2a2a44" stroke-width="1" stroke-dasharray="3,2"/>
+  <line x1="110" y1="56" x2="110" y2="192" stroke="#2a2a44" stroke-width="1" stroke-dasharray="3,2"/>
+  <!-- axes -->
+  <line x1="42" y1="56"  x2="42"  y2="192" stroke="#444466" stroke-width="1"/>
+  <line x1="42" y1="192" x2="178" y2="192" stroke="#444466" stroke-width="1"/>
+  <!-- area fill: α = √t -->
+  <polygon points="42,192 56,152 70,132 84,117 98,104 110,94 124,83 138,74 152,65 166,57 178,56 178,192"
+    fill="#ff6633" fill-opacity="0.12"/>
+  <!-- curve: α = √t -->
+  <polyline points="42,192 56,152 70,132 84,117 98,104 110,94 124,83 138,74 152,65 166,57 178,56"
+    fill="none" stroke="#ff7744" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+  <!-- color strip -->
+  <rect x="42" y="202" width="136" height="14" rx="2" fill="url(#heat-grad)"/>
+  <!-- labels -->
+  <text x="110" y="52" text-anchor="middle" fill="#ffaa66" font-size="10" font-family="monospace" font-weight="bold">HEAT  α = √t</text>
+  <text x="40"  y="195" text-anchor="end" fill="#555577" font-size="7" font-family="monospace">0</text>
+  <text x="40"  y="114" text-anchor="end" fill="#555577" font-size="7" font-family="monospace">.5</text>
+  <text x="40"  y="59"  text-anchor="end" fill="#555577" font-size="7" font-family="monospace">1</text>
+  <text x="42"  y="200" text-anchor="middle" fill="#555577" font-size="7" font-family="monospace">0</text>
+  <text x="110" y="200" text-anchor="middle" fill="#555577" font-size="7" font-family="monospace">.5</text>
+  <text x="178" y="200" text-anchor="middle" fill="#555577" font-size="7" font-family="monospace">1</text>
+  <text x="110" y="225" text-anchor="middle" fill="#665544" font-size="8" font-family="monospace">sees faint dye early</text>
+
+  <!-- ===== PANEL 2: DENSITY ===== -->
+  <rect x="211" y="42" width="158" height="168" rx="4" fill="#14142a"/>
+  <!-- gridlines -->
+  <line x1="223" y1="76"  x2="359" y2="76"  stroke="#2a2a44" stroke-width="1" stroke-dasharray="3,2"/>
+  <line x1="223" y1="114" x2="359" y2="114" stroke="#2a2a44" stroke-width="1" stroke-dasharray="3,2"/>
+  <line x1="223" y1="152" x2="359" y2="152" stroke="#2a2a44" stroke-width="1" stroke-dasharray="3,2"/>
+  <line x1="291" y1="56"  x2="291" y2="192" stroke="#2a2a44" stroke-width="1" stroke-dasharray="3,2"/>
+  <!-- axes -->
+  <line x1="223" y1="56"  x2="223" y2="192" stroke="#444466" stroke-width="1"/>
+  <line x1="223" y1="192" x2="359" y2="192" stroke="#444466" stroke-width="1"/>
+  <!-- area fill: α = t -->
+  <polygon points="223,192 359,56 359,192" fill="#aaaaff" fill-opacity="0.12"/>
+  <!-- curve: α = t (linear) -->
+  <line x1="223" y1="192" x2="359" y2="56" stroke="#aaaaff" stroke-width="2.5"/>
+  <!-- color strip -->
+  <rect x="223" y="202" width="136" height="14" rx="2" fill="url(#density-grad)"/>
+  <!-- labels -->
+  <text x="291" y="52" text-anchor="middle" fill="#ccccff" font-size="10" font-family="monospace" font-weight="bold">LINEAR  α = t</text>
+  <text x="221" y="195" text-anchor="end" fill="#555577" font-size="7" font-family="monospace">0</text>
+  <text x="221" y="114" text-anchor="end" fill="#555577" font-size="7" font-family="monospace">.5</text>
+  <text x="221" y="59"  text-anchor="end" fill="#555577" font-size="7" font-family="monospace">1</text>
+  <text x="223" y="200" text-anchor="middle" fill="#555577" font-size="7" font-family="monospace">0</text>
+  <text x="291" y="200" text-anchor="middle" fill="#555577" font-size="7" font-family="monospace">.5</text>
+  <text x="359" y="200" text-anchor="middle" fill="#555577" font-size="7" font-family="monospace">1</text>
+  <text x="291" y="225" text-anchor="middle" fill="#554466" font-size="8" font-family="monospace">proportional / neutral</text>
+
+  <!-- ===== PANEL 3: COOL ===== -->
+  <rect x="392" y="42" width="158" height="168" rx="4" fill="#14142a"/>
+  <!-- gridlines -->
+  <line x1="404" y1="76"  x2="540" y2="76"  stroke="#2a2a44" stroke-width="1" stroke-dasharray="3,2"/>
+  <line x1="404" y1="114" x2="540" y2="114" stroke="#2a2a44" stroke-width="1" stroke-dasharray="3,2"/>
+  <line x1="404" y1="152" x2="540" y2="152" stroke="#2a2a44" stroke-width="1" stroke-dasharray="3,2"/>
+  <line x1="472" y1="56"  x2="472" y2="192" stroke="#2a2a44" stroke-width="1" stroke-dasharray="3,2"/>
+  <!-- axes -->
+  <line x1="404" y1="56"  x2="404" y2="192" stroke="#444466" stroke-width="1"/>
+  <line x1="404" y1="192" x2="540" y2="192" stroke="#444466" stroke-width="1"/>
+  <!-- area fill: α = t² -->
+  <polygon points="404,192 418,192 432,191 446,186 460,178 472,165 486,148 500,128 514,104 528,79 540,56 540,192"
+    fill="#00ccff" fill-opacity="0.12"/>
+  <!-- curve: α = t² -->
+  <polyline points="404,192 418,192 432,191 446,186 460,178 472,165 486,148 500,128 514,104 528,79 540,56"
+    fill="none" stroke="#00ccff" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+  <!-- color strip -->
+  <rect x="404" y="202" width="136" height="14" rx="2" fill="url(#cool-grad)"/>
+  <!-- labels -->
+  <text x="472" y="52" text-anchor="middle" fill="#66ddff" font-size="10" font-family="monospace" font-weight="bold">COOL  α = t²</text>
+  <text x="402" y="195" text-anchor="end" fill="#555577" font-size="7" font-family="monospace">0</text>
+  <text x="402" y="114" text-anchor="end" fill="#555577" font-size="7" font-family="monospace">.5</text>
+  <text x="402" y="59"  text-anchor="end" fill="#555577" font-size="7" font-family="monospace">1</text>
+  <text x="404" y="200" text-anchor="middle" fill="#555577" font-size="7" font-family="monospace">0</text>
+  <text x="472" y="200" text-anchor="middle" fill="#555577" font-size="7" font-family="monospace">.5</text>
+  <text x="540" y="200" text-anchor="middle" fill="#555577" font-size="7" font-family="monospace">1</text>
+  <text x="472" y="225" text-anchor="middle" fill="#445566" font-size="8" font-family="monospace">highlights dense regions</text>
+
+  <!-- Footer note -->
+  <text x="290" y="260" text-anchor="middle" fill="#333355" font-size="9" font-family="monospace">color strip shows the hue mapping at full opacity — opacity curve controls transparency along that same axis</text>
+</svg>

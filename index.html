@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <title>GPU Fluid Dynamics</title>
     <meta charset="UTF-8">
@@ -19,8 +19,12 @@
                 <label>Force: <span id="force-val">30</span></label>
                 <input type="range" id="force" min="5" max="100" value="30">
             </div>
-            
-            <!-- Performance/Quality Controls -->
+            <div class="control">
+                <label>Dye Decay: <span id="dye-dissipation-val">1.000</span></label>
+                <input type="range" id="dye-dissipation" min="980" max="1000" step="1" value="1000">
+            </div>
+
+            <!-- Performance / Quality Controls -->
             <div class="control-section">
                 <h4>Performance</h4>
                 <div class="control">
@@ -33,7 +37,7 @@
                         <option value="96">96³ (884K voxels)</option>
                         <option value="128">128³ (2.1M voxels)</option>
                     </select>
-                    <small style="color: #888;">Requires page reload</small>
+                    <small style="color:#888;">Requires page reload</small>
                 </div>
                 <div class="control">
                     <label>Quality Preset:</label>
@@ -51,18 +55,18 @@
                         Auto-optimize for FPS
                     </label>
                 </div>
-                <button id="benchmark-btn" style="width: 100%; margin-top: 5px;">Run Benchmark</button>
+                <button id="benchmark-btn" style="width:100%;margin-top:5px;">Run Benchmark</button>
             </div>
-            
-            <!-- 3D Slice Controls -->
-            <div class="control-section">
+
+            <!-- 3D Slice Controls (Task 12.2: id="slice-controls") -->
+            <div class="control-section" id="slice-controls">
                 <h4>3D Slice View</h4>
                 <div class="control">
                     <label>Axis:</label>
                     <div class="button-group">
                         <button class="axis-btn active" data-axis="z">XY (Z-slice)</button>
-                        <button class="axis-btn" data-axis="y">XZ (Y-slice)</button>
-                        <button class="axis-btn" data-axis="x">YZ (X-slice)</button>
+                        <button class="axis-btn"        data-axis="y">XZ (Y-slice)</button>
+                        <button class="axis-btn"        data-axis="x">YZ (X-slice)</button>
                     </div>
                 </div>
                 <div class="control">
@@ -70,16 +74,70 @@
                     <input type="range" id="slice-depth" min="0" max="100" value="50" step="1">
                 </div>
             </div>
-            
+
+            <!-- Ray March Controls (Tasks 9.3–9.5, hidden by default) -->
+            <div class="control-section ray-controls" id="ray-controls" style="display:none;">
+                <h4>Volumetric Rendering</h4>
+                <div class="control">
+                    <label>Color Gradient:</label>
+                    <select id="ray-gradient">
+                        <option value="heat"      selected>Heat (black→red→white)</option>
+                        <option value="cool"             >Cool (black→blue→white)</option>
+                        <option value="plasma"           >Plasma (black→purple→white)</option>
+                        <option value="grayscale"        >Greyscale</option>
+                    </select>
+                </div>
+                <div class="control">
+                    <label>Opacity Mode:</label>
+                    <select id="ray-opacity-mode">
+                        <option value="linear"          >Linear</option>
+                        <option value="sensitive" selected>Sensitive (reveals thin regions)</option>
+                        <option value="dense"           >Dense (shows core)</option>
+                        <option value="threshold"       >Threshold (cuts haze)</option>
+                    </select>
+                </div>
+                <div class="control">
+                    <label>Opacity Scale: <span id="ray-opacity-scale-val">20.0</span></label>
+                    <input type="range" id="ray-opacity-scale" min="1" max="100" step="1" value="20">
+                </div>
+                <div class="control">
+                    <label>Step Count:</label>
+                    <select id="ray-step-count">
+                        <option value="64"        >64 (fast, lower quality)</option>
+                        <option value="128" selected>128 (balanced)</option>
+                        <option value="256"       >256 (high quality)</option>
+                    </select>
+                </div>
+                <div class="control">
+                    <label>
+                        <input type="checkbox" id="show-wireframe" checked>
+                        Show bounding box
+                    </label>
+                </div>
+            </div>
+
+            <!-- Action buttons -->
             <button id="clear">Clear</button>
             <button id="pause">Pause</button>
+            <!-- Task 8.5: Render mode toggle -->
+            <button id="render-mode-toggle" title="Switch to slice view">SLICE</button>
             <button id="performance-toggle">Performance</button>
-            <span class="render-mode-badge" id="render-mode-badge">DETECTING...</span>
-            <span style="color:#aaa; font-size:12px;">Click and drag to add dye | Press P for performance</span>
+
+            <!-- GPU hw/sw badge (existing) -->
+            <span class="render-mode-badge" id="render-mode-badge">DETECTING…</span>
+
+            <!-- Task 12.3: SLICE/VOLUMETRIC mode badge -->
+            <span class="mode-badge mode-raymarch" id="sim-mode-badge">VOLUMETRIC</span>
+
+            <span style="color:#aaa;font-size:12px;">
+                Drag to paint &nbsp;|&nbsp; P performance &nbsp;|&nbsp; ? shortcuts
+            </span>
         </div>
+
         <div id="canvas-container">
             <canvas id="displayCanvas" width="512" height="512"></canvas>
         </div>
+
         <div id="info">
             <div id="info-header">
                 <span>Info</span>
@@ -89,30 +147,52 @@
                 <div>FPS: <span id="fps">0</span></div>
                 <div>Grid: <span id="grid-info">-</span></div>
                 <div>Voxels: <span id="voxels-info">-</span></div>
-                <div id="camera-info" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #444;">
-                    <div><strong>Camera (Orbit)</strong></div>
-                    <div>Azimuth: <span id="cam-azimuth">0.0°</span></div>
-                    <div>Elevation: <span id="cam-elevation">0.0°</span></div>
-                    <div>Distance: <span id="cam-distance">2.50</span></div>
+
+                <!-- Camera info (Task 10.6: mode indicator) -->
+                <div id="camera-info" style="margin-top:10px;padding-top:10px;border-top:1px solid #444;">
+                    <div>
+                        <strong id="cam-mode-label">Camera (Orbit)</strong>
+                        <!-- Task 10.6 -->
+                        <span id="camera-mode-indicator" class="camera-mode-badge orbit"
+                              style="margin-left:6px;font-size:10px;">ORBIT</span>
+                    </div>
+                    <!-- Orbit-specific rows -->
+                    <div id="cam-orbit-rows">
+                        <div>Azimuth: <span id="cam-azimuth">0.0°</span></div>
+                        <div>Elevation: <span id="cam-elevation">0.0°</span></div>
+                        <div>Distance: <span id="cam-distance">2.50</span></div>
+                    </div>
+                    <!-- Free-flight rows (hidden initially) -->
+                    <div id="cam-free-rows" style="display:none;">
+                        <div>X: <span id="cam-pos-x">0.50</span></div>
+                        <div>Y: <span id="cam-pos-y">0.50</span></div>
+                        <div>Z: <span id="cam-pos-z">-0.50</span></div>
+                        <div>Yaw: <span id="cam-yaw">0.0°</span></div>
+                        <div>Pitch: <span id="cam-pitch">0.0°</span></div>
+                    </div>
                 </div>
-                <div id="raycast-info" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #444;">
+
+                <div id="raycast-info" style="margin-top:10px;padding-top:10px;border-top:1px solid #444;">
                     <div><strong>Raycast (3D)</strong></div>
-                    <div>Hit: <span id="ray-hit" style="color: #888;">-</span></div>
-                    <div>Point: <span id="ray-point" style="color: #888;">-</span></div>
+                    <div>Hit: <span id="ray-hit" style="color:#888;">-</span></div>
+                    <div>Point: <span id="ray-point" style="color:#888;">-</span></div>
                 </div>
-                <div style="margin-top: 10px; font-size: 11px; color: #888;">
+
+                <div style="margin-top:10px;font-size:11px;color:#888;">
                     <div>LEFT: Paint fluid</div>
-                    <div>RIGHT: Rotate camera</div>
+                    <div>RIGHT: Rotate / Look</div>
                     <div>WHEEL: Zoom</div>
-                    <div>R: Reset camera</div>
+                    <div>F: Orbit ↔ Free-flight</div>
+                    <div>V: Slice ↔ Volumetric</div>
+                    <div>R: Reset camera &nbsp; ?: Shortcuts</div>
                 </div>
             </div>
         </div>
     </div>
-    
+
     <!-- Hidden WebGL canvas -->
     <canvas id="webglCanvas" width="128" height="128" style="display:none;"></canvas>
-    
+
     <!-- Instructions Modal -->
     <div id="instructions-modal" class="modal hidden">
         <div class="modal-content">
@@ -122,77 +202,50 @@
             </div>
             <div class="modal-body">
                 <p class="modal-intro">
-                    To test performance with software rendering (no GPU acceleration), you need to launch your browser with the <code>--disable-gpu</code> flag.
-                    The <code>--user-data-dir</code> flag creates a temporary profile to avoid affecting your main browser.
+                    To test performance with software rendering (no GPU acceleration), launch your browser with the
+                    <code>--disable-gpu</code> flag. The <code>--user-data-dir</code> flag creates a temporary
+                    profile to avoid affecting your main browser.
                 </p>
-                
+
                 <div class="instruction-section">
-                    <h3>Windows - Chrome</h3>
+                    <h3>Windows — Chrome</h3>
                     <div class="command-box">
                         <code id="cmd-chrome-win">chrome.exe --disable-gpu --user-data-dir="%TEMP%\chrome-no-gpu"</code>
                         <button class="copy-btn" data-target="cmd-chrome-win">Copy</button>
                     </div>
-                    <p class="instruction-note">Run this in Command Prompt or PowerShell from the Chrome installation directory.</p>
                 </div>
-                
+
                 <div class="instruction-section">
-                    <h3>Windows - Edge</h3>
+                    <h3>Windows — Edge</h3>
                     <div class="command-box">
                         <code id="cmd-edge-win">msedge.exe --disable-gpu --user-data-dir="%TEMP%\edge-no-gpu"</code>
                         <button class="copy-btn" data-target="cmd-edge-win">Copy</button>
                     </div>
-                    <p class="instruction-note">Run this in Command Prompt or PowerShell from the Edge installation directory.</p>
                 </div>
-                
+
                 <div class="instruction-section">
-                    <h3>macOS - Chrome</h3>
+                    <h3>macOS — Chrome</h3>
                     <div class="command-box">
                         <code id="cmd-chrome-mac">/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome --disable-gpu --user-data-dir=/tmp/chrome-no-gpu</code>
                         <button class="copy-btn" data-target="cmd-chrome-mac">Copy</button>
                     </div>
-                    <p class="instruction-note">Run this in Terminal.</p>
                 </div>
-                
-                <div class="instruction-section">
-                    <h3>Linux - Chrome</h3>
-                    <div class="command-box">
-                        <code id="cmd-chrome-linux">google-chrome --disable-gpu --user-data-dir=/tmp/chrome-no-gpu</code>
-                        <button class="copy-btn" data-target="cmd-chrome-linux">Copy</button>
-                    </div>
-                    <p class="instruction-note">Run this in your terminal. Command may vary (try <code>chromium-browser</code> or <code>chromium</code>).</p>
-                </div>
-                
-                <div class="instruction-section">
-                    <h3>Firefox - All Platforms</h3>
-                    <p class="instruction-note">
-                        Firefox uses different rendering paths. To test software rendering:
-                        <ol>
-                            <li>Type <code>about:config</code> in the address bar</li>
-                            <li>Search for <code>webgl.disable-angle</code> and set to <code>true</code></li>
-                            <li>Search for <code>gfx.webrender.software</code> and set to <code>true</code></li>
-                            <li>Restart Firefox</li>
-                        </ol>
-                        Remember to revert these settings after testing.
-                    </p>
-                </div>
-                
+
                 <div class="instruction-section warning">
                     <h3>⚠️ Important Notes</h3>
                     <ul>
-                        <li>Software rendering will be <strong>significantly slower</strong> than GPU-accelerated rendering</li>
-                        <li>The temporary profile ensures your regular browser profile remains unchanged</li>
-                        <li>Navigate to this page after launching the browser with these flags</li>
-                        <li>The performance dashboard will automatically detect which mode is active</li>
-                        <li>Close the special browser instance when done testing</li>
+                        <li>Software rendering will be <strong>significantly slower</strong></li>
+                        <li>The temporary profile leaves your regular profile unchanged</li>
+                        <li>The performance dashboard will detect which mode is active</li>
                     </ul>
                 </div>
-                
+
                 <div class="instruction-section">
                     <h3>Verifying Rendering Mode</h3>
                     <p class="instruction-note">
-                        Open the Performance Dashboard and check the "System Info" section. 
-                        The "Rendering Mode" field will show either <span class="badge-hardware">HARDWARE</span> 
-                        or <span class="badge-software">SOFTWARE</span>.
+                        Open the Performance Dashboard → System Info → "Rendering Mode".
+                        It shows <span class="badge-hardware">HARDWARE</span> or
+                        <span class="badge-software">SOFTWARE</span>.
                     </p>
                 </div>
             </div>
@@ -201,8 +254,7 @@
             </div>
         </div>
     </div>
-    
-    <!-- Load modules -->
+
     <script type="module" src="js/main.js"></script>
 </body>
 </html>

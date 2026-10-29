@@ -91,18 +91,32 @@ export class PerformanceOptimizer {
     }
 
     /**
-     * Automatically reduce quality to improve FPS
+     * Automatically reduce quality to improve FPS.
+     * Priority: 1) reduce ray march steps, 2) reduce Jacobi iterations.
      */
     autoReduceQuality() {
+        // Step 1 — reduce ray march step count before touching Jacobi
+        if (CONFIG.renderMode === 'raymarch') {
+            const stepLadder = [256, 192, 128, 96, 64];
+            const currentSteps = CONFIG.rayMarchSteps;
+            const currentIdx = stepLadder.indexOf(
+                stepLadder.reduce((prev, val) => Math.abs(val - currentSteps) < Math.abs(prev - currentSteps) ? val : prev)
+            );
+            if (currentIdx < stepLadder.length - 1) {
+                const newSteps = stepLadder[currentIdx + 1];
+                CONFIG.rayMarchSteps = newSteps;
+                console.log(`⚡ Auto-optimization: Reduced ray march steps ${currentSteps} → ${newSteps}`);
+                this.showOptimizationNotice(`Reduced ray march steps to ${newSteps}`);
+                return;
+            }
+        }
+
+        // Step 2 — reduce Jacobi iterations
         const currentIterations = this.simulation.params.iterations;
-        
-        if (currentIterations > 3) {  // Min 3 instead of 15
-            const newIterations = Math.max(3, currentIterations - 2);  // Reduce by 2
+        if (currentIterations > 3) {
+            const newIterations = Math.max(3, currentIterations - 2);
             this.simulation.params.iterations = newIterations;
-            
             console.log(`⚡ Auto-optimization: Reduced iterations ${currentIterations} → ${newIterations}`);
-            
-            // Show notification to user
             this.showOptimizationNotice(`Reduced iterations to ${newIterations} for better FPS`);
         }
     }
